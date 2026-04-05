@@ -116,11 +116,13 @@ function renderPage(containerId, incidentNum, text, suffix) {
       ${suffix===2 ? '<button class="submit-btn" style="margin-right:10px;background:#1f2937;border:1px solid var(--border)" id="back_2">← Назад</button>' : ''}
       <button class="submit-btn" id="btn_${suffix}">${suffix===1?'Далее →':'Отправить и получить промпт'}</button>
     </div>
+    <div class="submit-section"><button class="submit-btn" id="btn_${suffix}">${suffix===1?'Далее →':'Отправить и получить промпт'}</button></div>
   `;
 }
 
 function collectAnswers(suffix) {
   const pick = (prefix, count) => Object.fromEntries(Array.from({length:count}, (_,i)=>[String(i+1), document.getElementById(`${prefix}${i+1}_${suffix}`).value || '']));
+  const pick = (prefix, count) => Object.fromEntries(Array.from({length:count}, (_,i)=>[String(i+1), document.getElementById(`${prefix}${i+1}_${suffix}`).value || 'НЕТ']));
   const type = document.getElementById(`inc1_${suffix}`).value === 'ДА' ? 'Событие ИБ' : (document.getElementById(`inc2_${suffix}`).value === 'ДА' ? 'Инцидент ИБ' : '');
   return {
     what: pick('what',5), why: pick('why',4), properties: pick('prop',3), threat: pick('thr',5), incidentType: type
@@ -130,6 +132,8 @@ function collectAnswers(suffix) {
 function isValid(a) {
   const filled = (obj) => Object.values(obj).every((v) => v === 'ДА' || v === 'НЕТ');
   return filled(a.what) && filled(a.why) && filled(a.properties) && filled(a.threat) && Boolean(a.incidentType);
+  const hasYes = (obj) => Object.values(obj).some((v) => v === 'ДА');
+  return hasYes(a.what) && hasYes(a.why) && hasYes(a.properties) && hasYes(a.threat) && Boolean(a.incidentType);
 }
 
 function asYesNo(v){ return v === 'ДА' ? 'ДА' : 'НЕТ'; }
@@ -156,6 +160,7 @@ return `Ты эксперт по информационной безопасно
       const a1 = collectAnswers(1);
       if (!isValid(a1)) {
         document.getElementById('pageError').textContent = 'Пожалуйста, ответьте на все вопросы по инциденту №1.';
+        document.getElementById('pageError').textContent = 'Заполните все разделы: в каждом должен быть хотя бы один ответ ДА.';
         return;
       }
       answers1 = a1;
@@ -176,6 +181,10 @@ return `Ты эксперт по информационной безопасно
       const a2 = collectAnswers(2);
       if (!isValid(a2)) {
         document.getElementById('pageError').textContent = 'Пожалуйста, ответьте на все вопросы по инциденту №2.';
+    document.getElementById('btn_2').addEventListener('click', async () => {
+      const a2 = collectAnswers(2);
+      if (!isValid(a2)) {
+        document.getElementById('pageError').textContent = 'Заполните все разделы: в каждом должен быть хотя бы один ответ ДА.';
         return;
       }
       document.getElementById('pageError').textContent = '';
