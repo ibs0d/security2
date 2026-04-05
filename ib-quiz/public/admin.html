@@ -33,7 +33,7 @@
     <p class="muted" id="msg"></p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Время</th><th>Команда</th><th>Инцидент 1 (кратко)</th><th>Инцидент 2 (кратко)</th></tr></thead>
+        <thead><tr><th>Время</th><th>Команда</th><th>Анкета</th><th>Инцидент 1 (кратко)</th><th>Инцидент 2 (кратко)</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
@@ -59,6 +59,19 @@ function brief(answers) {
   ].join('');
 }
 
+function personInfo(personData) {
+  if (!personData) return '<span class="muted">Нет данных</span>';
+  const item = (label, value) => `<div><span class="muted">${label}:</span> ${value || '—'}</div>`;
+  return [
+    item('Фамилия', personData.lastName),
+    item('Имя', personData.firstName),
+    item('Отчество', personData.middleName),
+    item('Должность', personData.position),
+    item('Отдел', personData.department),
+    item('Дата отчёта', personData.reportDate)
+  ].join('');
+}
+
 async function loadSubmissions() {
   msg.textContent = '';
   const response = await fetch('/api/submissions', {
@@ -75,7 +88,7 @@ async function loadSubmissions() {
   // TODO: compare with answer-key.json
 
   if (!submissions.length) {
-    rows.innerHTML = '<tr><td colspan="4" class="muted">Пока нет отправок.</td></tr>';
+    rows.innerHTML = '<tr><td colspan="5" class="muted">Пока нет отправок.</td></tr>';
     return;
   }
 
@@ -83,6 +96,7 @@ async function loadSubmissions() {
     <tr>
       <td>${new Date(item.timestamp).toLocaleString('ru-RU')}</td>
       <td>Команда ${item.teamId}</td>
+      <td>${personInfo(item.personData)}</td>
       <td>${brief(item.answers1)}</td>
       <td>${brief(item.answers2)}</td>
     </tr>

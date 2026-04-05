@@ -85,8 +85,8 @@ app.post('/api/verify-pin', async (req, res) => {
 
 app.post('/api/submit', async (req, res) => {
   try {
-    const { teamId, answers1, answers2 } = req.body || {};
-    if (!teamId || !answers1 || !answers2) {
+    const { teamId, personData, answers1, answers2 } = req.body || {};
+    if (!teamId || !personData || !answers1 || !answers2) {
       return res.status(400).json({ error: 'Недостаточно данных для отправки' });
     }
 
@@ -94,6 +94,7 @@ app.post('/api/submit', async (req, res) => {
     all.push({
       timestamp: new Date().toISOString(),
       teamId: Number(teamId),
+      personData,
       answers1,
       answers2
     });
