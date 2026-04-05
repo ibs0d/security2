@@ -87,13 +87,16 @@ function toggle(btn, type, hiddenId) {
 }
 function toggleExclusive(btn, type, thisId, otherId) {
   toggle(btn, type, thisId);
+  const other = document.querySelector(`[data-hidden="${otherId}"]`);
+  if (!other) return;
+
+  other.querySelectorAll('.toggle-btn').forEach((b) => b.classList.remove('active'));
   if (type === 'yes') {
     document.getElementById(otherId).value = 'НЕТ';
-    const other = document.querySelector(`[data-hidden="${otherId}"]`);
-    if (other) {
-      other.querySelectorAll('.toggle-btn').forEach((b) => b.classList.remove('active'));
-      other.querySelector('.no').classList.add('active');
-    }
+    other.querySelector('.no').classList.add('active');
+  } else {
+    document.getElementById(otherId).value = 'ДА';
+    other.querySelector('.yes').classList.add('active');
   }
 }
 
