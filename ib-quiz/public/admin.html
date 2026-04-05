@@ -59,17 +59,57 @@ function brief(answers) {
   ].join('');
 }
 
+function pickFirstValue(source, aliases) {
+  if (!source || typeof source !== 'object') return '';
+  for (const key of aliases) {
+    const value = source[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+}
+
+function normalizePersonData(personData) {
+  const src = personData || {};
+  return {
+    lastName: pickFirstValue(src, ['lastName', 'lastname', 'last_name', 'surname', 'familyName', 'Фамилия']),
+    firstName: pickFirstValue(src, ['firstName', 'firstname', 'first_name', 'name', 'givenName', 'Имя']),
+    middleName: pickFirstValue(src, ['middleName', 'middlename', 'middle_name', 'patronymic', 'secondName', 'Отчество']),
+    position: pickFirstValue(src, ['position', 'jobTitle', 'title', 'role', 'Должность']),
+    department: pickFirstValue(src, ['department', 'dept', 'division', 'unit', 'Отдел']),
+    reportDate: pickFirstValue(src, ['reportDate', 'report_date', 'date', 'reportingDate', 'Дата отчёта', 'Дата отчета'])
+  };
+}
+
+
+function hasPersonFields(personData) {
+  if (!personData || typeof personData !== 'object') return false;
+  return Object.values(normalizePersonData(personData)).some(Boolean);
+}
+
+function getPersonDataForIncident(item, incidentNum) {
+  const direct = item[`personData${incidentNum}`];
+  if (hasPersonFields(direct)) return direct;
+
+  const fallback = item.personData;
+  if (hasPersonFields(fallback)) return fallback;
+
+  return direct || fallback || null;
+}
+
 function personInfo(personData, incidentNum) {
   if (!personData) return '<span class="muted">Нет данных</span>';
+  const normalized = normalizePersonData(personData);
   const item = (label, value) => `<div><span class="muted">${label}:</span> ${value || '—'}</div>`;
   return [
     `<div style="margin-bottom:6px"><strong>Инцидент ${incidentNum}</strong></div>`,
-    item('Фамилия', personData.lastName),
-    item('Имя', personData.firstName),
-    item('Отчество', personData.middleName),
-    item('Должность', personData.position),
-    item('Отдел', personData.department),
-    item('Дата отчёта', personData.reportDate)
+    item('Фамилия', normalized.lastName),
+    item('Имя', normalized.firstName),
+    item('Отчество', normalized.middleName),
+    item('Должность', normalized.position),
+    item('Отдел', normalized.department),
+    item('Дата отчёта', normalized.reportDate)
   ].join('');
 }
 
@@ -98,9 +138,9 @@ async function loadSubmissions() {
       <td>${new Date(item.timestamp).toLocaleString('ru-RU')}</td>
       <td>Команда ${item.teamId}</td>
       <td>
-        ${personInfo(item.personData1 || item.personData, 1)}
+        ${personInfo(getPersonDataForIncident(item, 1), 1)}
         <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
-        ${personInfo(item.personData2 || item.personData, 2)}
+        ${personInfo(getPersonDataForIncident(item, 2), 2)}
       </td>
       <td>${brief(item.answers1)}</td>
       <td>${brief(item.answers2)}</td>
