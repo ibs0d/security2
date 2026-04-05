@@ -44,18 +44,68 @@ const adminPassword = prompt('Введите пароль администрат
 const rows = document.getElementById('rows');
 const msg = document.getElementById('msg');
 
-function badges(label, obj) {
-  return `<div><div class="muted" style="margin-bottom:4px">${label}</div><div class="badges">${Object.entries(obj || {}).map(([k,v]) => `<span class="badge ${v==='ДА'?'yes':'no'}">${k}:${v}</span>`).join('')}</div></div>`;
+function normalizeAnswerValue(value) {
+  return String(value || '').trim().toLocaleLowerCase('ru-RU');
 }
 
-function brief(answers) {
+function normalizeTextValue(value) {
+  return String(value || '').trim().toLocaleLowerCase('ru-RU');
+}
+
+function normalizeDateValue(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  const dotMatch = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (dotMatch) {
+    const day = dotMatch[1].padStart(2, '0');
+    const month = dotMatch[2].padStart(2, '0');
+    const year = dotMatch[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  const isoMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch) {
+    const year = isoMatch[1];
+    const month = isoMatch[2].padStart(2, '0');
+    const day = isoMatch[3].padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  return normalizeTextValue(raw);
+}
+
+function getCurrentIsoDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getBadgeClass(value, correctValue) {
+  if (!correctValue) return 'badge';
+  return normalizeAnswerValue(value) === normalizeAnswerValue(correctValue) ? 'badge yes' : 'badge no';
+}
+
+function getValueClass(value, correctValue, normalizeFn = normalizeTextValue) {
+  if (!correctValue) return '';
+  return normalizeFn(value) === normalizeFn(correctValue) ? 'yes' : 'no';
+}
+
+function badges(label, obj, correctObj) {
+  return `<div><div class="muted" style="margin-bottom:4px">${label}</div><div class="badges">${Object.entries(obj || {}).map(([k,v]) => `<span class="${getBadgeClass(v, correctObj?.[k])}">${k}:${v}</span>`).join('')}</div></div>`;
+}
+
+function brief(answers, correctAnswers) {
   if (!answers) return '<span class="muted">Нет данных</span>';
+  const incidentTypeClass = getBadgeClass(answers.incidentType, correctAnswers?.incidentType);
   return [
-    badges('Что произошло', answers.what),
-    badges('Почему произошло', answers.why),
-    badges('Свойства', answers.properties),
-    badges('Угроза', answers.threat),
-    `<div class="muted" style="margin-top:8px">Тип: ${answers.incidentType || '—'}</div>`
+    badges('Что произошло', answers.what, correctAnswers?.what),
+    badges('Почему произошло', answers.why, correctAnswers?.why),
+    badges('Свойства', answers.properties, correctAnswers?.properties),
+    badges('Угроза', answers.threat, correctAnswers?.threat),
+    `<div style="margin-top:8px"><span class="muted">Тип:</span> <span class="${incidentTypeClass}">${answers.incidentType || '—'}</span></div>`
   ].join('');
 }
 
@@ -98,18 +148,21 @@ function getPersonDataForIncident(item, incidentNum) {
   return direct || fallback || null;
 }
 
-function personInfo(personData, incidentNum) {
+function personInfo(personData, incidentNum, correctPersonData) {
   if (!personData) return '<span class="muted">Нет данных</span>';
   const normalized = normalizePersonData(personData);
-  const item = (label, value) => `<div><span class="muted">${label}:</span> ${value || '—'}</div>`;
+  const normalizedCorrect = normalizePersonData(correctPersonData || {});
+  const todayIsoDate = getCurrentIsoDate();
+
+  const item = (label, value, className = '') => `<div><span class="muted">${label}:</span> <span class="${className}">${value || '—'}</span></div>`;
   return [
     `<div style="margin-bottom:6px"><strong>Инцидент ${incidentNum}</strong></div>`,
-    item('Фамилия', normalized.lastName),
-    item('Имя', normalized.firstName),
-    item('Отчество', normalized.middleName),
-    item('Должность', normalized.position),
-    item('Отдел', normalized.department),
-    item('Дата отчёта', normalized.reportDate)
+    item('Фамилия', normalized.lastName, getValueClass(normalized.lastName, normalizedCorrect.lastName)),
+    item('Имя', normalized.firstName, getValueClass(normalized.firstName, normalizedCorrect.firstName)),
+    item('Отчество', normalized.middleName, getValueClass(normalized.middleName, normalizedCorrect.middleName)),
+    item('Должность', normalized.position, getValueClass(normalized.position, normalizedCorrect.position)),
+    item('Отдел', normalized.department, getValueClass(normalized.department, normalizedCorrect.department)),
+    item('Дата отчёта', normalized.reportDate, getValueClass(normalized.reportDate, todayIsoDate, normalizeDateValue))
   ].join('');
 }
 
@@ -126,7 +179,15 @@ async function loadSubmissions() {
   }
 
   const submissions = await response.json();
-  // TODO: compare with answer-key.json
+  const answerKeysByTeamId = {};
+  const teamIds = [...new Set(submissions.map((item) => Number(item.teamId)).filter(Boolean))];
+  await Promise.all(teamIds.map(async (teamId) => {
+    const answerResponse = await fetch(`/api/answer-keys/${teamId}`, {
+      headers: { Authorization: `Bearer ${adminPassword}` }
+    });
+    if (!answerResponse.ok) return;
+    answerKeysByTeamId[teamId] = await answerResponse.json();
+  }));
 
   if (!submissions.length) {
     rows.innerHTML = '<tr><td colspan="5" class="muted">Пока нет отправок.</td></tr>';
@@ -138,12 +199,12 @@ async function loadSubmissions() {
       <td>${new Date(item.timestamp).toLocaleString('ru-RU')}</td>
       <td>Команда ${item.teamId}</td>
       <td>
-        ${personInfo(getPersonDataForIncident(item, 1), 1)}
+        ${personInfo(getPersonDataForIncident(item, 1), 1, answerKeysByTeamId[item.teamId]?.personData1)}
         <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
-        ${personInfo(getPersonDataForIncident(item, 2), 2)}
+        ${personInfo(getPersonDataForIncident(item, 2), 2, answerKeysByTeamId[item.teamId]?.personData2)}
       </td>
-      <td>${brief(item.answers1)}</td>
-      <td>${brief(item.answers2)}</td>
+      <td>${brief(item.answers1, answerKeysByTeamId[item.teamId]?.answers1)}</td>
+      <td>${brief(item.answers2, answerKeysByTeamId[item.teamId]?.answers2)}</td>
     </tr>
   `).join('');
 }
