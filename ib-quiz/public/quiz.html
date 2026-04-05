@@ -24,7 +24,8 @@
     .props-row{display:flex}.prop-item{flex:1;padding:16px;border-right:1px solid var(--border);text-align:center}.prop-item:last-child{border-right:none}.prop-label{display:block;margin-bottom:10px;color:var(--text-dim)}
     .submit-section{text-align:center;padding-top:6px}.submit-btn{background:var(--accent);color:#fff;border:none;padding:14px 30px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;cursor:pointer}
     .submit-btn:hover{background:#2563eb}
-    .error-line{color:var(--red);margin-bottom:14px;text-align:center;min-height:18px}
+    .error-line{position:sticky;top:10px;z-index:8;color:var(--red);margin-bottom:14px;text-align:center;min-height:18px;background:rgba(13,15,20,.95);padding:6px 10px;border-radius:6px;border:1px solid transparent}
+    .error-line:not(:empty){border-color:rgba(239,68,68,.35)}
     .manual-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:16px 20px}
     .manual-field{display:flex;flex-direction:column;gap:6px}
     .manual-field.full{grid-column:1/-1}
@@ -35,7 +36,7 @@
     .modal{width:min(920px,100%);height:min(92vh,100%);background:var(--surface);border:1px solid var(--border-active);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px}
     textarea{flex:1;background:#0b0e13;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:12px;resize:none;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.45}
     .copy-btn{background:var(--accent);border:none;color:white;padding:14px;border-radius:8px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:18px}
-    @media(max-width:700px){.manual-fields{grid-template-columns:1fr}.props-row{flex-direction:column}.prop-item{border-right:none;border-bottom:1px solid var(--border)}.prop-item:last-child{border-bottom:none}.check-item{flex-direction:column;align-items:flex-start}.incident-card{top:6px}}
+    @media(max-width:700px){.manual-fields{grid-template-columns:1fr}.props-row{flex-direction:column}.prop-item{border-right:none;border-bottom:1px solid var(--border)}.prop-item:last-child{border-bottom:none}.check-item{flex-direction:column;align-items:flex-start}.incident-card{top:46px}.error-line{top:6px}}
   </style>
 </head>
 <body>
@@ -49,7 +50,7 @@
       <h1>ОТЧЁТ О СОБЫТИИ ИНФОРМАЦИОННОЙ БЕЗОПАСНОСТИ</h1>
     </div>
     <div id="pageError" class="error-line"></div>
-    <div class="card">
+    <div class="card" id="reportDataCard">
       <div class="card-header">Данные для отчёта</div>
       <div class="manual-fields">
         <div class="manual-field">
@@ -114,6 +115,14 @@ function getCurrentStep() {
   return document.getElementById('page2').classList.contains('hidden') ? 1 : 2;
 }
 
+function placeReportDataCard(step) {
+  const page = document.getElementById(step === 2 ? 'page2' : 'page1');
+  const reportDataCard = document.getElementById('reportDataCard');
+  const incidentCard = page?.querySelector('.incident-card');
+  if (!page || !reportDataCard || !incidentCard) return;
+  incidentCard.insertAdjacentElement('afterend', reportDataCard);
+}
+
 function showStep(step, pushHistory = false) {
   const page1 = document.getElementById('page1');
   const page2 = document.getElementById('page2');
@@ -132,6 +141,7 @@ function showStep(step, pushHistory = false) {
   } else {
     history.replaceState({ step }, '', step === 2 ? '#step-2' : '#step-1');
   }
+  placeReportDataCard(step);
 }
 
 function saveDraft() {
