@@ -186,7 +186,7 @@ app.get('/', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
 app.get('/quiz', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'quiz.html')));
 app.get('/admin', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   // eslint-disable-next-line no-console
-  console.log(`IB Quiz server started on http://localhost:${PORT}`);
+  console.log(`IB Quiz server started on http://0.0.0.0:${PORT}`);
 });
