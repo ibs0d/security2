@@ -140,18 +140,32 @@ function formatDateForInput(date) {
   return formatter.format(date);
 }
 
-function getPersonFieldBadgeClass(fieldName, value, correctValue, expectedReportDate) {
+function resolveExpectedReportDate(correctValue) {
+  const normalizedCorrectValue = normalizeAnswerValue(correctValue);
+  if (normalizedCorrectValue === 'сегодня') {
+    return formatDateForInput(new Date());
+  }
+  if (normalizedCorrectValue === 'вчера') {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return formatDateForInput(yesterday);
+  }
+  return correctValue;
+}
+
+function getPersonFieldBadgeClass(fieldName, value, correctValue) {
   if (fieldName === 'reportDate') {
+    const expectedReportDate = resolveExpectedReportDate(correctValue);
     return isSameDate(value, expectedReportDate) ? 'badge yes' : 'badge no';
   }
   return getBadgeClass(value, correctValue);
 }
 
-function personInfo(personData, incidentNum, correctPersonData, expectedReportDate) {
+function personInfo(personData, incidentNum, correctPersonData) {
   if (!personData) return '<span class="muted">Нет данных</span>';
   const normalized = normalizePersonData(personData);
   const normalizedCorrect = normalizePersonData(correctPersonData);
-  const item = (label, key, value) => `<div><span class="muted">${label}:</span> <span class="${getPersonFieldBadgeClass(key, value, normalizedCorrect[key], expectedReportDate)}">${value || '—'}</span></div>`;
+  const item = (label, key, value) => `<div><span class="muted">${label}:</span> <span class="${getPersonFieldBadgeClass(key, value, normalizedCorrect[key])}">${value || '—'}</span></div>`;
   return [
     `<div style="margin-bottom:6px"><strong>Инцидент ${incidentNum}</strong></div>`,
     item('Фамилия', 'lastName', normalized.lastName),
@@ -193,15 +207,14 @@ async function loadSubmissions() {
 
   rows.innerHTML = submissions.map((item) => {
     const correctAnswers = answerKeysByTeamId[item.teamId] || {};
-    const expectedReportDate = formatDateForInput(new Date(item.timestamp || Date.now()));
     return `
     <tr>
       <td>${new Date(item.timestamp).toLocaleString('ru-RU')}</td>
       <td>Команда ${item.teamId}</td>
       <td>
-        ${personInfo(getPersonDataForIncident(item, 1), 1, correctAnswers.personData1, expectedReportDate)}
+        ${personInfo(getPersonDataForIncident(item, 1), 1, correctAnswers.personData1)}
         <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
-        ${personInfo(getPersonDataForIncident(item, 2), 2, correctAnswers.personData2, expectedReportDate)}
+        ${personInfo(getPersonDataForIncident(item, 2), 2, correctAnswers.personData2)}
       </td>
       <td>${brief(item.answers1, correctAnswers.answers1)}</td>
       <td>${brief(item.answers2, correctAnswers.answers2)}</td>
