@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IB Quiz — Викторина</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#0d0f14; --surface:#13161d; --surface2:#1a1e28; --border:#252a38; --border-active:#3b82f6; --text:#e2e8f0; --text-muted:#64748b; --text-dim:#94a3b8; --accent:#3b82f6; --green:#22c55e; --red:#ef4444; --yes-bg:rgba(34,197,94,.08); --yes-border:rgba(34,197,94,.3); --no-bg:rgba(239,68,68,.06); --no-border:rgba(239,68,68,.2); }
+    *{box-sizing:border-box;margin:0;padding:0} body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;padding:30px 16px 70px}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+    .wrapper{max-width:860px;margin:0 auto;position:relative;z-index:1}.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+    .link{color:var(--text-muted);text-decoration:none;font-family:'IBM Plex Mono',monospace;font-size:12px}.link:hover{color:var(--accent)}
+    .header{text-align:center;margin-bottom:20px}.task-badge{display:inline-block;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:4px 12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);margin-bottom:14px}
+    h1{font-family:'IBM Plex Mono',monospace;font-size:clamp(16px,3vw,23px)}
+    .pages{position:relative;overflow:hidden}.page{transition:all .35s ease}.hidden{display:none}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px}.card-header{padding:14px 20px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+    .incident-box{padding:15px 18px;color:var(--text-dim);white-space:pre-wrap;line-height:1.55;font-family:'IBM Plex Mono',monospace;font-size:13px}
+    .check-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border)} .check-item:last-child{border-bottom:none}
+    .check-text{font-size:13.5px;color:var(--text-dim);flex:1}
+    .toggle-group{display:flex;gap:6px}.toggle-btn{padding:5px 14px;border-radius:4px;border:1px solid var(--border);background:transparent;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;color:var(--text-muted);transition:.15s}
+    .toggle-btn.yes.active{background:var(--yes-bg);border-color:var(--yes-border);color:var(--green)} .toggle-btn.no.active{background:var(--no-bg);border-color:var(--no-border);color:var(--red)}
+    .props-row{display:flex}.prop-item{flex:1;padding:16px;border-right:1px solid var(--border);text-align:center}.prop-item:last-child{border-right:none}.prop-label{display:block;margin-bottom:10px;color:var(--text-dim)}
+    .submit-section{text-align:center;padding-top:6px}.submit-btn{background:var(--accent);color:#fff;border:none;padding:14px 30px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;cursor:pointer}
+    .submit-btn:hover{background:#2563eb}
+    .error-line{color:var(--red);margin-bottom:14px;text-align:center;min-height:18px}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;padding:24px;align-items:center;justify-content:center}.modal-overlay.show{display:flex}
+    .modal{width:min(920px,100%);height:min(92vh,100%);background:var(--surface);border:1px solid var(--border-active);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px}
+    textarea{flex:1;background:#0b0e13;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:12px;resize:none;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.45}
+    .copy-btn{background:var(--accent);border:none;color:white;padding:14px;border-radius:8px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:18px}
+    @media(max-width:700px){.props-row{flex-direction:column}.prop-item{border-right:none;border-bottom:1px solid var(--border)}.prop-item:last-child{border-bottom:none}.check-item{flex-direction:column;align-items:flex-start}}
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="topbar">
+      <span class="link">Тренировка ИБ</span>
+      <a class="link" href="#" id="logout">Выйти</a>
+    </div>
+    <div class="header">
+      <div class="task-badge">Отчёт команды</div>
+      <h1>ОТЧЁТ О СОБЫТИИ ИНФОРМАЦИОННОЙ БЕЗОПАСНОСТИ</h1>
+    </div>
+    <div id="pageError" class="error-line"></div>
+
+    <div class="pages">
+      <section id="page1" class="page"></section>
+      <section id="page2" class="page hidden"></section>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <h2 style="font-family:'IBM Plex Mono',monospace;color:var(--accent)">Промпт для Qwen</h2>
+      <textarea id="promptText" readonly></textarea>
+      <button class="copy-btn" id="copyBtn">📋 Скопировать</button>
+    </div>
+  </div>
+
+<script>
+const sections = {
+  what:[
+    'Получение подозрительного письма с вредоносной ссылкой или вложением','Обнаружение вируса на рабочей станции','Подозрительная активность после успешного входа','Передача конфиденциальной информации сторонним лицам','Звонок от «руководства» с запросом конфиденциальных данных'
+  ],
+  why:['Сотрудник не распознал признаки фишингового письма','Человеческая ошибка при выборе получателя в почтовом клиенте','Сотрудник использовал слишком простой пароль','Сотрудник подключил личный USB-накопитель в обход политики ИБ'],
+  props:['Конфиденциальность','Целостность','Доступность'],
+  threat:['Мошенничество','Взлом данных','Кража данных','Вирусная атака','Человеческий фактор']
+};
+
+const teamId = Number(localStorage.getItem('teamId'));
+if (!teamId) window.location.href = '/';
+
+let incident1 = ''; let incident2 = '';
+let answers1 = null;
+
+document.getElementById('logout').addEventListener('click', (e) => {
+  e.preventDefault();
+  localStorage.removeItem('teamId');
+  window.location.href = '/';
+});
+
+function toggle(btn, type, hiddenId) {
+  const group = btn.closest('.toggle-group');
+  group.querySelectorAll('.toggle-btn').forEach((b) => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(hiddenId).value = type === 'yes' ? 'ДА' : 'НЕТ';
+}
+function toggleExclusive(btn, type, thisId, otherId) {
+  toggle(btn, type, thisId);
+  if (type === 'yes') {
+    document.getElementById(otherId).value = 'НЕТ';
+    const other = document.querySelector(`[data-hidden="${otherId}"]`);
+    if (other) {
+      other.querySelectorAll('.toggle-btn').forEach((b) => b.classList.remove('active'));
+      other.querySelector('.no').classList.add('active');
+    }
+  }
+}
+
+function createToggleItem(text, key, exclusive) {
+  const fn = exclusive ? `toggleExclusive(this,'yes','${key}','${exclusive}')` : `toggle(this,'yes','${key}')`;
+  const fnNo = exclusive ? `toggleExclusive(this,'no','${key}','${exclusive}')` : `toggle(this,'no','${key}')`;
+  return `<li class="check-item"><span class="check-text">${text}</span><div class="toggle-group" data-hidden="${key}"><button class="toggle-btn yes" onclick="${fn}">ДА</button><button class="toggle-btn no" onclick="${fnNo}">НЕТ</button></div><input type="hidden" id="${key}"></li>`;
+}
+
+function renderPage(containerId, incidentNum, text, suffix) {
+  const box = document.getElementById(containerId);
+  box.innerHTML = `
+    <div class="card"><div class="card-header">Инцидент №${incidentNum}</div><div class="incident-box">${text}</div></div>
+    <div class="card"><div class="card-header">Укажите что произошло</div>${sections.what.map((t,i)=>createToggleItem(t,`what${i+1}_${suffix}`)).join('')}</div>
+    <div class="card"><div class="card-header">Укажите почему произошло</div>${sections.why.map((t,i)=>createToggleItem(t,`why${i+1}_${suffix}`)).join('')}</div>
+    <div class="card"><div class="card-header">Какие свойства информации подверглись атаке</div><div class="props-row">${sections.props.map((t,i)=>`<div class="prop-item"><span class="prop-label">${t}</span><div class="toggle-group" data-hidden="prop${i+1}_${suffix}"><button class="toggle-btn yes" onclick="toggle(this,'yes','prop${i+1}_${suffix}')">ДА</button><button class="toggle-btn no" onclick="toggle(this,'no','prop${i+1}_${suffix}')">НЕТ</button></div><input type="hidden" id="prop${i+1}_${suffix}"></div>`).join('')}</div></div>
+    <div class="card"><div class="card-header">Укажите вид угрозы ИБ</div>${sections.threat.map((t,i)=>createToggleItem(t,`thr${i+1}_${suffix}`)).join('')}</div>
+    <div class="card"><div class="card-header">О каком происшествии идёт речь</div><div class="props-row"><div class="prop-item"><span class="prop-label">Событие ИБ</span><div class="toggle-group" data-hidden="inc1_${suffix}"><button class="toggle-btn yes" onclick="toggleExclusive(this,'yes','inc1_${suffix}','inc2_${suffix}')">ДА</button><button class="toggle-btn no" onclick="toggleExclusive(this,'no','inc1_${suffix}','inc2_${suffix}')">НЕТ</button></div><input type="hidden" id="inc1_${suffix}"></div><div class="prop-item"><span class="prop-label">Инцидент ИБ</span><div class="toggle-group" data-hidden="inc2_${suffix}"><button class="toggle-btn yes" onclick="toggleExclusive(this,'yes','inc2_${suffix}','inc1_${suffix}')">ДА</button><button class="toggle-btn no" onclick="toggleExclusive(this,'no','inc2_${suffix}','inc1_${suffix}')">НЕТ</button></div><input type="hidden" id="inc2_${suffix}"></div></div></div>
+    <div class="submit-section"><button class="submit-btn" id="btn_${suffix}">${suffix===1?'Далее →':'Отправить и получить промпт'}</button></div>
+  `;
+}
+
+function collectAnswers(suffix) {
+  const pick = (prefix, count) => Object.fromEntries(Array.from({length:count}, (_,i)=>[String(i+1), document.getElementById(`${prefix}${i+1}_${suffix}`).value || 'НЕТ']));
+  const type = document.getElementById(`inc1_${suffix}`).value === 'ДА' ? 'Событие ИБ' : (document.getElementById(`inc2_${suffix}`).value === 'ДА' ? 'Инцидент ИБ' : '');
+  return {
+    what: pick('what',5), why: pick('why',4), properties: pick('prop',3), threat: pick('thr',5), incidentType: type
+  };
+}
+
+function isValid(a) {
+  const hasYes = (obj) => Object.values(obj).some((v) => v === 'ДА');
+  return hasYes(a.what) && hasYes(a.why) && hasYes(a.properties) && hasYes(a.threat) && Boolean(a.incidentType);
+}
+
+function asYesNo(v){ return v === 'ДА' ? 'ДА' : 'НЕТ'; }
+function buildIncidentAnswersText(a){
+return `Что произошло:\n- Получение подозрительного письма: ${asYesNo(a.what['1'])}\n- Обнаружение вируса: ${asYesNo(a.what['2'])}\n- Подозрительная активность после входа: ${asYesNo(a.what['3'])}\n- Передача конфиденциальной информации: ${asYesNo(a.what['4'])}\n- Звонок от руководства: ${asYesNo(a.what['5'])}\n\nПочему произошло:\n- Не распознал фишинг: ${asYesNo(a.why['1'])}\n- Ошибка при выборе получателя: ${asYesNo(a.why['2'])}\n- Простой пароль: ${asYesNo(a.why['3'])}\n- USB-накопитель: ${asYesNo(a.why['4'])}\n\nСвойства информации под угрозой:\n- Конфиденциальность: ${asYesNo(a.properties['1'])}\n- Целостность: ${asYesNo(a.properties['2'])}\n- Доступность: ${asYesNo(a.properties['3'])}\n\nВид угрозы:\n- Мошенничество: ${asYesNo(a.threat['1'])}\n- Взлом данных: ${asYesNo(a.threat['2'])}\n- Кража данных: ${asYesNo(a.threat['3'])}\n- Вирусная атака: ${asYesNo(a.threat['4'])}\n- Человеческий фактор: ${asYesNo(a.threat['5'])}\n\nТип происшествия: ${a.incidentType}`;
+}
+
+function buildPrompt(a1, a2) {
+return `Ты эксперт по информационной безопасности и оцениваешь работу команды школьников.\n\n## Инцидент 1\n${incident1}\n\n### Ответы команды по инциденту 1:\n${buildIncidentAnswersText(a1)}\n\n## Инцидент 2\n${incident2}\n\n### Ответы команды по инциденту 2:\n${buildIncidentAnswersText(a2)}\n\n## Оцени работу команды:\nДля каждого инцидента:\n1. Проверь правильность классификации того, что произошло\n2. Проверь правильность определения причины\n3. Оцени верность определения затронутых свойств информации (конфиденциальность, целостность, доступность — триада ЦРУ)\n4. Проверь правильность определения вида угрозы\n5. Проверь правильно ли команда определила: это Событие ИБ или Инцидент ИБ\n\nПо каждому пункту напиши: правильно ли, и кратко объясни почему.\nВ конце дай общую оценку по 10-балльной шкале и краткий итог.`;
+}
+
+(async function init(){
+  try {
+    const response = await fetch(`/api/scenarios/${teamId}`);
+    if (!response.ok) throw new Error('Не удалось загрузить сценарии');
+    const data = await response.json();
+    incident1 = data.incident1;
+    incident2 = data.incident2;
+
+    renderPage('page1', 1, incident1, 1);
+    renderPage('page2', 2, incident2, 2);
+
+    document.getElementById('btn_1').addEventListener('click', () => {
+      const a1 = collectAnswers(1);
+      if (!isValid(a1)) {
+        document.getElementById('pageError').textContent = 'Заполните все разделы: в каждом должен быть хотя бы один ответ ДА.';
+        return;
+      }
+      answers1 = a1;
+      document.getElementById('pageError').textContent = '';
+      document.getElementById('page1').classList.add('hidden');
+      document.getElementById('page2').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    document.getElementById('btn_2').addEventListener('click', async () => {
+      const a2 = collectAnswers(2);
+      if (!isValid(a2)) {
+        document.getElementById('pageError').textContent = 'Заполните все разделы: в каждом должен быть хотя бы один ответ ДА.';
+        return;
+      }
+      document.getElementById('pageError').textContent = '';
+
+      const send = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId, answers1, answers2: a2 })
+      });
+      if (!send.ok) {
+        document.getElementById('pageError').textContent = 'Не удалось отправить результаты.';
+        return;
+      }
+
+      document.getElementById('promptText').value = buildPrompt(answers1, a2);
+      document.getElementById('modal').classList.add('show');
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      await navigator.clipboard.writeText(document.getElementById('promptText').value);
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Скопировано!';
+      setTimeout(() => btn.textContent = '📋 Скопировать', 1500);
+    });
+  } catch (e) {
+    document.getElementById('pageError').textContent = 'Ошибка загрузки данных команды.';
+  }
+})();
+</script>
+</body>
+</html>

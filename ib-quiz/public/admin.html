@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IB Quiz — Админ-панель</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#0d0f14; --surface:#13161d; --surface2:#1a1e28; --border:#252a38; --accent:#3b82f6; --green:#22c55e; --red:#ef4444; --text:#e2e8f0; --text-muted:#64748b; }
+    *{box-sizing:border-box;margin:0;padding:0} body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;padding:24px}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+    .wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto}.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}
+    h1{font-family:'IBM Plex Mono',monospace;font-size:22px}.btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:6px;cursor:pointer;font-family:'IBM Plex Mono',monospace}
+    .btn:hover{border-color:var(--accent);color:var(--accent)} .btn.danger:hover{border-color:var(--red);color:var(--red)}
+    .table-wrap{overflow:auto;border:1px solid var(--border);border-radius:10px}
+    table{width:100%;border-collapse:collapse;background:var(--surface)} th,td{padding:12px;border-bottom:1px solid var(--border);vertical-align:top;font-size:13px}
+    th{background:var(--surface2);font-family:'IBM Plex Mono',monospace;text-align:left}
+    .badges{display:flex;flex-wrap:wrap;gap:6px}.badge{font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid}
+    .yes{color:var(--green);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08)} .no{color:var(--red);border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08)}
+    .muted{color:var(--text-muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <h1>Админ-панель отправок</h1>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="refreshBtn">Обновить</button>
+        <button class="btn danger" id="clearBtn">Очистить всё</button>
+      </div>
+    </div>
+
+    <p class="muted" id="msg"></p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Время</th><th>Команда</th><th>Инцидент 1 (кратко)</th><th>Инцидент 2 (кратко)</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+const adminPassword = prompt('Введите пароль администратора:') || '';
+const rows = document.getElementById('rows');
+const msg = document.getElementById('msg');
+
+function badges(label, obj) {
+  return `<div><div class="muted" style="margin-bottom:4px">${label}</div><div class="badges">${Object.entries(obj || {}).map(([k,v]) => `<span class="badge ${v==='ДА'?'yes':'no'}">${k}:${v}</span>`).join('')}</div></div>`;
+}
+
+function brief(answers) {
+  if (!answers) return '<span class="muted">Нет данных</span>';
+  return [
+    badges('Что произошло', answers.what),
+    badges('Почему произошло', answers.why),
+    badges('Свойства', answers.properties),
+    badges('Угроза', answers.threat),
+    `<div class="muted" style="margin-top:8px">Тип: ${answers.incidentType || '—'}</div>`
+  ].join('');
+}
+
+async function loadSubmissions() {
+  msg.textContent = '';
+  const response = await fetch('/api/submissions', {
+    headers: { Authorization: `Bearer ${adminPassword}` }
+  });
+
+  if (!response.ok) {
+    msg.textContent = 'Не удалось авторизоваться или загрузить данные.';
+    rows.innerHTML = '';
+    return;
+  }
+
+  const submissions = await response.json();
+  // TODO: compare with answer-key.json
+
+  if (!submissions.length) {
+    rows.innerHTML = '<tr><td colspan="4" class="muted">Пока нет отправок.</td></tr>';
+    return;
+  }
+
+  rows.innerHTML = submissions.map((item) => `
+    <tr>
+      <td>${new Date(item.timestamp).toLocaleString('ru-RU')}</td>
+      <td>Команда ${item.teamId}</td>
+      <td>${brief(item.answers1)}</td>
+      <td>${brief(item.answers2)}</td>
+    </tr>
+  `).join('');
+}
+
+document.getElementById('refreshBtn').addEventListener('click', loadSubmissions);
+document.getElementById('clearBtn').addEventListener('click', async () => {
+  if (!confirm('Удалить все отправки?')) return;
+  const response = await fetch('/api/submissions', {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${adminPassword}` }
+  });
+  if (!response.ok) {
+    msg.textContent = 'Ошибка при очистке.';
+    return;
+  }
+  loadSubmissions();
+});
+
+loadSubmissions();
+</script>
+</body>
+</html>
