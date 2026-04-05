@@ -69,13 +69,77 @@ const sections = {
 
 const teamId = Number(localStorage.getItem('teamId'));
 if (!teamId) window.location.href = '/';
+const QUIZ_STORAGE_KEY = `quizDraft_team_${teamId}`;
 
 let incident1 = ''; let incident2 = '';
 let answers1 = null;
 
+function getCurrentStep() {
+  return document.getElementById('page2').classList.contains('hidden') ? 1 : 2;
+}
+
+function showStep(step, pushHistory = false) {
+  const page1 = document.getElementById('page1');
+  const page2 = document.getElementById('page2');
+  if (!page1 || !page2) return;
+
+  if (step === 2) {
+    page1.classList.add('hidden');
+    page2.classList.remove('hidden');
+  } else {
+    page2.classList.add('hidden');
+    page1.classList.remove('hidden');
+  }
+
+  if (pushHistory) {
+    history.pushState({ step }, '', step === 2 ? '#step-2' : '#step-1');
+  } else {
+    history.replaceState({ step }, '', step === 2 ? '#step-2' : '#step-1');
+  }
+}
+
+function saveDraft() {
+  const hiddenInputs = Array.from(document.querySelectorAll('input[type="hidden"][id]'));
+  const values = Object.fromEntries(hiddenInputs.map((input) => [input.id, input.value || '']));
+  const payload = { step: getCurrentStep(), values };
+  localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(payload));
+}
+
+function restoreDraft() {
+  const raw = localStorage.getItem(QUIZ_STORAGE_KEY);
+  if (!raw) return 1;
+
+  try {
+    const parsed = JSON.parse(raw);
+    const values = parsed.values || {};
+    Object.entries(values).forEach(([id, value]) => {
+      const hidden = document.getElementById(id);
+      if (hidden) hidden.value = value;
+    });
+
+    document.querySelectorAll('.toggle-group[data-hidden]').forEach((group) => {
+      const hiddenId = group.getAttribute('data-hidden');
+      const hidden = document.getElementById(hiddenId);
+      if (!hidden) return;
+      group.querySelectorAll('.toggle-btn').forEach((btn) => btn.classList.remove('active'));
+      if (hidden.value === 'ДА') {
+        group.querySelector('.yes')?.classList.add('active');
+      } else if (hidden.value === 'НЕТ') {
+        group.querySelector('.no')?.classList.add('active');
+      }
+    });
+
+    return parsed.step === 2 ? 2 : 1;
+  } catch (e) {
+    localStorage.removeItem(QUIZ_STORAGE_KEY);
+    return 1;
+  }
+}
+
 document.getElementById('logout').addEventListener('click', (e) => {
   e.preventDefault();
   localStorage.removeItem('teamId');
+  localStorage.removeItem(QUIZ_STORAGE_KEY);
   window.location.href = '/';
 });
 
@@ -84,6 +148,7 @@ function toggle(btn, type, hiddenId) {
   group.querySelectorAll('.toggle-btn').forEach((b) => b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById(hiddenId).value = type === 'yes' ? 'ДА' : 'НЕТ';
+  saveDraft();
 }
 function toggleExclusive(btn, type, thisId, otherId) {
   toggle(btn, type, thisId);
@@ -98,6 +163,7 @@ function toggleExclusive(btn, type, thisId, otherId) {
     document.getElementById(otherId).value = 'ДА';
     other.querySelector('.yes').classList.add('active');
   }
+  saveDraft();
 }
 
 function createToggleItem(text, key, exclusive) {
@@ -154,6 +220,8 @@ return `Ты эксперт по информационной безопасно
 
     renderPage('page1', 1, incident1, 1);
     renderPage('page2', 2, incident2, 2);
+    const restoredStep = restoreDraft();
+    showStep(restoredStep, false);
 
     document.getElementById('btn_1').addEventListener('click', () => {
       const a1 = collectAnswers(1);
@@ -163,25 +231,33 @@ return `Ты эксперт по информационной безопасно
       }
       answers1 = a1;
       document.getElementById('pageError').textContent = '';
-      document.getElementById('page1').classList.add('hidden');
-      document.getElementById('page2').classList.remove('hidden');
+      showStep(2, true);
+      saveDraft();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     document.getElementById('back_2').addEventListener('click', () => {
       document.getElementById('pageError').textContent = '';
-      document.getElementById('page2').classList.add('hidden');
-      document.getElementById('page1').classList.remove('hidden');
+      showStep(1, true);
+      saveDraft();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
+    window.addEventListener('popstate', (event) => {
+      const stepFromState = event.state?.step;
+      showStep(stepFromState === 2 ? 2 : 1, false);
+      saveDraft();
+    });
+
     document.getElementById('btn_2').addEventListener('click', async () => {
+      const a1 = collectAnswers(1);
       const a2 = collectAnswers(2);
-      if (!isValid(a2)) {
+      if (!isValid(a1) || !isValid(a2)) {
         document.getElementById('pageError').textContent = 'Заполните все вопросы в каждом разделе и выберите тип происшествия.';
         return;
       }
       document.getElementById('pageError').textContent = '';
+      answers1 = a1;
 
       const send = await fetch('/api/submit', {
         method: 'POST',
@@ -195,6 +271,7 @@ return `Ты эксперт по информационной безопасно
 
       document.getElementById('promptText').value = buildPrompt(answers1, a2);
       document.getElementById('modal').classList.add('show');
+      localStorage.removeItem(QUIZ_STORAGE_KEY);
     });
 
     document.getElementById('copyBtn').addEventListener('click', async () => {
