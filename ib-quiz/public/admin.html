@@ -44,18 +44,28 @@ const adminPassword = prompt('Введите пароль администрат
 const rows = document.getElementById('rows');
 const msg = document.getElementById('msg');
 
-function badges(label, obj) {
-  return `<div><div class="muted" style="margin-bottom:4px">${label}</div><div class="badges">${Object.entries(obj || {}).map(([k,v]) => `<span class="badge ${v==='ДА'?'yes':'no'}">${k}:${v}</span>`).join('')}</div></div>`;
+function normalizeAnswerValue(value) {
+  return String(value || '').trim().toLocaleLowerCase('ru-RU');
 }
 
-function brief(answers) {
+function getBadgeClass(value, correctValue) {
+  if (!correctValue) return 'badge';
+  return normalizeAnswerValue(value) === normalizeAnswerValue(correctValue) ? 'badge yes' : 'badge no';
+}
+
+function badges(label, obj, correctObj) {
+  return `<div><div class="muted" style="margin-bottom:4px">${label}</div><div class="badges">${Object.entries(obj || {}).map(([k,v]) => `<span class="${getBadgeClass(v, correctObj?.[k])}">${k}:${v}</span>`).join('')}</div></div>`;
+}
+
+function brief(answers, correctAnswers) {
   if (!answers) return '<span class="muted">Нет данных</span>';
+  const incidentTypeClass = getBadgeClass(answers.incidentType, correctAnswers?.incidentType);
   return [
-    badges('Что произошло', answers.what),
-    badges('Почему произошло', answers.why),
-    badges('Свойства', answers.properties),
-    badges('Угроза', answers.threat),
-    `<div class="muted" style="margin-top:8px">Тип: ${answers.incidentType || '—'}</div>`
+    badges('Что произошло', answers.what, correctAnswers?.what),
+    badges('Почему произошло', answers.why, correctAnswers?.why),
+    badges('Свойства', answers.properties, correctAnswers?.properties),
+    badges('Угроза', answers.threat, correctAnswers?.threat),
+    `<div style="margin-top:8px"><span class="muted">Тип:</span> <span class="${incidentTypeClass}">${answers.incidentType || '—'}</span></div>`
   ].join('');
 }
 
@@ -126,7 +136,15 @@ async function loadSubmissions() {
   }
 
   const submissions = await response.json();
-  // TODO: compare with answer-key.json
+  const answerKeysByTeamId = {};
+  const teamIds = [...new Set(submissions.map((item) => Number(item.teamId)).filter(Boolean))];
+  await Promise.all(teamIds.map(async (teamId) => {
+    const answerResponse = await fetch(`/api/answer-keys/${teamId}`, {
+      headers: { Authorization: `Bearer ${adminPassword}` }
+    });
+    if (!answerResponse.ok) return;
+    answerKeysByTeamId[teamId] = await answerResponse.json();
+  }));
 
   if (!submissions.length) {
     rows.innerHTML = '<tr><td colspan="5" class="muted">Пока нет отправок.</td></tr>';
@@ -142,8 +160,8 @@ async function loadSubmissions() {
         <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
         ${personInfo(getPersonDataForIncident(item, 2), 2)}
       </td>
-      <td>${brief(item.answers1)}</td>
-      <td>${brief(item.answers2)}</td>
+      <td>${brief(item.answers1, answerKeysByTeamId[item.teamId]?.answers1)}</td>
+      <td>${brief(item.answers2, answerKeysByTeamId[item.teamId]?.answers2)}</td>
     </tr>
   `).join('');
 }

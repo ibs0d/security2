@@ -16,6 +16,7 @@ const PUBLIC_DIR = path.join(ROOT, 'public');
 
 const TEAMS_FILE = path.join(CONFIG_DIR, 'teams.json');
 const SUBMISSIONS_FILE = path.join(DATA_DIR, 'submissions.json');
+const ANSWER_KEYS_DIR = path.join(CONFIG_DIR, 'answer-keys');
 
 app.use(express.json());
 app.use(express.static(PUBLIC_DIR));
@@ -34,6 +35,46 @@ async function readJson(filePath, fallback = null) {
 
 async function writeJson(filePath, value) {
   await fs.writeFile(filePath, JSON.stringify(value, null, 2), 'utf-8');
+}
+
+function parseSimpleYaml(yamlText) {
+  const root = {};
+  const stack = [{ indent: -1, value: root }];
+
+  const lines = yamlText.split('\n');
+  for (const rawLine of lines) {
+    const trimmed = rawLine.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const indent = rawLine.match(/^\s*/)[0].length;
+    while (stack.length > 1 && indent <= stack[stack.length - 1].indent) {
+      stack.pop();
+    }
+
+    const current = stack[stack.length - 1].value;
+    const keyValueMatch = trimmed.match(/^([^:]+):\s*(.*)$/);
+    if (!keyValueMatch) continue;
+
+    const key = keyValueMatch[1].trim().replace(/^"(.*)"$/, '$1');
+    const rawValue = keyValueMatch[2];
+
+    if (rawValue === '') {
+      current[key] = {};
+      stack.push({ indent, value: current[key] });
+      continue;
+    }
+
+    const unquotedValue = rawValue.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
+    current[key] = unquotedValue;
+  }
+
+  return root;
+}
+
+async function readTeamAnswerKey(teamId) {
+  const yamlPath = path.join(ANSWER_KEYS_DIR, `team${teamId}.yaml`);
+  const yamlRaw = await fs.readFile(yamlPath, 'utf-8');
+  return parseSimpleYaml(yamlRaw);
 }
 
 function getAdminToken(req) {
@@ -115,6 +156,20 @@ app.get('/api/submissions', adminAuth, async (_req, res) => {
     return res.json(all);
   } catch (error) {
     return res.status(500).json({ error: 'Ошибка чтения отправок' });
+  }
+});
+
+app.get('/api/answer-keys/:teamId', adminAuth, async (req, res) => {
+  try {
+    const teamId = Number(req.params.teamId);
+    if (!Number.isInteger(teamId) || teamId < 1) {
+      return res.status(400).json({ error: 'Некорректный teamId' });
+    }
+
+    const answerKey = await readTeamAnswerKey(teamId);
+    return res.json(answerKey);
+  } catch (error) {
+    return res.status(404).json({ error: 'Файл ответов не найден' });
   }
 });
 
