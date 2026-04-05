@@ -106,10 +106,14 @@ function showStep(step, pushHistory = false) {
 }
 
 function saveDraft() {
-  const savedInputs = Array.from(document.querySelectorAll('input[id]'));
-  const values = Object.fromEntries(savedInputs.map((input) => [input.id, input.value || '']));
-  const payload = { step: getCurrentStep(), values };
-  localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(payload));
+  try {
+    const savedInputs = Array.from(document.querySelectorAll('input[id]'));
+    const values = Object.fromEntries(savedInputs.map((input) => [input.id, input.value || '']));
+    const payload = { step: getCurrentStep(), values };
+    localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(payload));
+  } catch (e) {
+    console.warn('saveDraft failed:', e);
+  }
 }
 
 function restoreDraft() {
@@ -138,6 +142,7 @@ function restoreDraft() {
 
     return parsed.step === 2 ? 2 : 1;
   } catch (e) {
+    console.warn('restoreDraft failed, clearing draft:', e);
     localStorage.removeItem(QUIZ_STORAGE_KEY);
     return 1;
   }
@@ -303,6 +308,12 @@ return `Промпт закодирован в base64\n${encodedPrompt}`;
     document.querySelectorAll('.manual-field input').forEach((input) => {
       input.addEventListener('input', saveDraft);
     });
+
+    window.addEventListener('beforeunload', saveDraft);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') saveDraft();
+    });
+
     const restoredStep = restoreDraft();
     showStep(restoredStep, false);
 
