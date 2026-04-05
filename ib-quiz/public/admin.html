@@ -59,10 +59,11 @@ function brief(answers) {
   ].join('');
 }
 
-function personInfo(personData) {
+function personInfo(personData, incidentNum) {
   if (!personData) return '<span class="muted">Нет данных</span>';
   const item = (label, value) => `<div><span class="muted">${label}:</span> ${value || '—'}</div>`;
   return [
+    `<div style="margin-bottom:6px"><strong>Инцидент ${incidentNum}</strong></div>`,
     item('Фамилия', personData.lastName),
     item('Имя', personData.firstName),
     item('Отчество', personData.middleName),
@@ -96,7 +97,11 @@ async function loadSubmissions() {
     <tr>
       <td>${new Date(item.timestamp).toLocaleString('ru-RU')}</td>
       <td>Команда ${item.teamId}</td>
-      <td>${personInfo(item.personData)}</td>
+      <td>
+        ${personInfo(item.personData1 || item.personData, 1)}
+        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
+        ${personInfo(item.personData2 || item.personData, 2)}
+      </td>
       <td>${brief(item.answers1)}</td>
       <td>${brief(item.answers2)}</td>
     </tr>

@@ -50,36 +50,6 @@
       <h1>ОТЧЁТ О СОБЫТИИ ИНФОРМАЦИОННОЙ БЕЗОПАСНОСТИ</h1>
     </div>
     <div id="pageError" class="error-line"></div>
-    <div class="card" id="reportDataCard">
-      <div class="card-header">Данные для отчёта</div>
-      <div class="manual-fields">
-        <div class="manual-field">
-          <label for="lastName">Фамилия</label>
-          <input id="lastName" type="text" required autocomplete="family-name">
-        </div>
-        <div class="manual-field">
-          <label for="firstName">Имя</label>
-          <input id="firstName" type="text" required autocomplete="given-name">
-        </div>
-        <div class="manual-field">
-          <label for="middleName">Отчество</label>
-          <input id="middleName" type="text" required autocomplete="additional-name">
-        </div>
-        <div class="manual-field">
-          <label for="position">Должность</label>
-          <input id="position" type="text" required>
-        </div>
-        <div class="manual-field">
-          <label for="department">Отдел</label>
-          <input id="department" type="text" required>
-        </div>
-        <div class="manual-field">
-          <label for="reportDate">Дата отчёта (ДД.ММ.ГГГГ)</label>
-          <input id="reportDate" type="text" required inputmode="numeric" placeholder="01.01.2026">
-        </div>
-      </div>
-    </div>
-
     <div class="pages">
       <section id="page1" class="page"></section>
       <section id="page2" class="page hidden"></section>
@@ -115,14 +85,6 @@ function getCurrentStep() {
   return document.getElementById('page2').classList.contains('hidden') ? 1 : 2;
 }
 
-function placeReportDataCard(step) {
-  const page = document.getElementById(step === 2 ? 'page2' : 'page1');
-  const reportDataCard = document.getElementById('reportDataCard');
-  const incidentCard = page?.querySelector('.incident-card');
-  if (!page || !reportDataCard || !incidentCard) return;
-  incidentCard.insertAdjacentElement('afterend', reportDataCard);
-}
-
 function showStep(step, pushHistory = false) {
   const page1 = document.getElementById('page1');
   const page2 = document.getElementById('page2');
@@ -141,7 +103,6 @@ function showStep(step, pushHistory = false) {
   } else {
     history.replaceState({ step }, '', step === 2 ? '#step-2' : '#step-1');
   }
-  placeReportDataCard(step);
 }
 
 function saveDraft() {
@@ -218,10 +179,45 @@ function createToggleItem(text, key, exclusive) {
   return `<li class="check-item"><span class="check-text">${text}</span><div class="toggle-group" data-hidden="${key}"><button class="toggle-btn yes" onclick="${fn}">ДА</button><button class="toggle-btn no" onclick="${fnNo}">НЕТ</button></div><input type="hidden" id="${key}"></li>`;
 }
 
+function createPersonFields(suffix) {
+  return `
+    <div class="card">
+      <div class="card-header">Данные для отчёта по инциденту №${suffix}</div>
+      <div class="manual-fields">
+        <div class="manual-field">
+          <label for="lastName_${suffix}">Фамилия</label>
+          <input id="lastName_${suffix}" type="text" required autocomplete="family-name">
+        </div>
+        <div class="manual-field">
+          <label for="firstName_${suffix}">Имя</label>
+          <input id="firstName_${suffix}" type="text" required autocomplete="given-name">
+        </div>
+        <div class="manual-field">
+          <label for="middleName_${suffix}">Отчество</label>
+          <input id="middleName_${suffix}" type="text" required autocomplete="additional-name">
+        </div>
+        <div class="manual-field">
+          <label for="position_${suffix}">Должность</label>
+          <input id="position_${suffix}" type="text" required>
+        </div>
+        <div class="manual-field">
+          <label for="department_${suffix}">Отдел</label>
+          <input id="department_${suffix}" type="text" required>
+        </div>
+        <div class="manual-field">
+          <label for="reportDate_${suffix}">Дата отчёта (ДД.ММ.ГГГГ)</label>
+          <input id="reportDate_${suffix}" type="text" required inputmode="numeric" placeholder="01.01.2026">
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderPage(containerId, incidentNum, text, suffix) {
   const box = document.getElementById(containerId);
   box.innerHTML = `
     <div class="card incident-card"><div class="card-header">Инцидент №${incidentNum}</div><div class="incident-box">${text}</div></div>
+    ${createPersonFields(suffix)}
     <div class="card"><div class="card-header">Укажите что произошло</div>${sections.what.map((t,i)=>createToggleItem(t,`what${i+1}_${suffix}`)).join('')}</div>
     <div class="card"><div class="card-header">Укажите почему произошло</div>${sections.why.map((t,i)=>createToggleItem(t,`why${i+1}_${suffix}`)).join('')}</div>
     <div class="card"><div class="card-header">Какие свойства информации подверглись атаке</div><div class="props-row">${sections.props.map((t,i)=>`<div class="prop-item"><span class="prop-label">${t}</span><div class="toggle-group" data-hidden="prop${i+1}_${suffix}"><button class="toggle-btn yes" onclick="toggle(this,'yes','prop${i+1}_${suffix}')">ДА</button><button class="toggle-btn no" onclick="toggle(this,'no','prop${i+1}_${suffix}')">НЕТ</button></div><input type="hidden" id="prop${i+1}_${suffix}"></div>`).join('')}</div></div>
@@ -248,14 +244,14 @@ function isValid(a) {
 }
 
 function asYesNo(v){ return v === 'ДА' ? 'ДА' : 'НЕТ'; }
-function collectPersonData() {
+function collectPersonData(suffix) {
   return {
-    lastName: document.getElementById('lastName').value.trim(),
-    firstName: document.getElementById('firstName').value.trim(),
-    middleName: document.getElementById('middleName').value.trim(),
-    position: document.getElementById('position').value.trim(),
-    department: document.getElementById('department').value.trim(),
-    reportDate: document.getElementById('reportDate').value.trim()
+    lastName: document.getElementById(`lastName_${suffix}`).value.trim(),
+    firstName: document.getElementById(`firstName_${suffix}`).value.trim(),
+    middleName: document.getElementById(`middleName_${suffix}`).value.trim(),
+    position: document.getElementById(`position_${suffix}`).value.trim(),
+    department: document.getElementById(`department_${suffix}`).value.trim(),
+    reportDate: document.getElementById(`reportDate_${suffix}`).value.trim()
   };
 }
 
@@ -284,8 +280,8 @@ function buildIncidentAnswersText(a){
 return `Что произошло:\n- Получение подозрительного письма: ${asYesNo(a.what['1'])}\n- Обнаружение вируса: ${asYesNo(a.what['2'])}\n- Подозрительная активность после входа: ${asYesNo(a.what['3'])}\n- Передача конфиденциальной информации: ${asYesNo(a.what['4'])}\n- Звонок от руководства: ${asYesNo(a.what['5'])}\n\nПочему произошло:\n- Не распознал фишинг: ${asYesNo(a.why['1'])}\n- Ошибка при выборе получателя: ${asYesNo(a.why['2'])}\n- Простой пароль: ${asYesNo(a.why['3'])}\n- USB-накопитель: ${asYesNo(a.why['4'])}\n\nСвойства информации под угрозой:\n- Конфиденциальность: ${asYesNo(a.properties['1'])}\n- Целостность: ${asYesNo(a.properties['2'])}\n- Доступность: ${asYesNo(a.properties['3'])}\n\nВид угрозы:\n- Мошенничество: ${asYesNo(a.threat['1'])}\n- Взлом данных: ${asYesNo(a.threat['2'])}\n- Кража данных: ${asYesNo(a.threat['3'])}\n- Вирусная атака: ${asYesNo(a.threat['4'])}\n- Человеческий фактор: ${asYesNo(a.threat['5'])}\n\nТип происшествия: ${a.incidentType}`;
 }
 
-function buildPrompt(personData, a1, a2) {
-return `Ты эксперт по информационной безопасности и оцениваешь работу команды школьников.\n\n## Данные отчёта\n- Фамилия: ${personData.lastName}\n- Имя: ${personData.firstName}\n- Отчество: ${personData.middleName}\n- Должность: ${personData.position}\n- Отдел: ${personData.department}\n- Дата отчёта: ${personData.reportDate}\n\n## Инцидент 1\n${incident1}\n\n### Ответы команды по инциденту 1:\n${buildIncidentAnswersText(a1)}\n\n## Инцидент 2\n${incident2}\n\n### Ответы команды по инциденту 2:\n${buildIncidentAnswersText(a2)}\n\n## Оцени работу команды:\nДля каждого инцидента:\n1. Проверь правильность классификации того, что произошло\n2. Проверь правильность определения причины\n3. Оцени верность определения затронутых свойств информации (конфиденциальность, целостность, доступность — триада ЦРУ)\n4. Проверь правильность определения вида угрозы\n5. Проверь правильно ли команда определила: это Событие ИБ или Инцидент ИБ\n\nПо каждому пункту напиши: правильно ли, и кратко объясни почему.\nВ конце дай общую оценку по 10-балльной шкале и краткий итог.`;
+function buildPrompt(personData1, a1, personData2, a2) {
+return `Ты эксперт по информационной безопасности и оцениваешь работу команды школьников.\n\n## Инцидент 1\n${incident1}\n\n### Данные отчёта по инциденту 1\n- Фамилия: ${personData1.lastName}\n- Имя: ${personData1.firstName}\n- Отчество: ${personData1.middleName}\n- Должность: ${personData1.position}\n- Отдел: ${personData1.department}\n- Дата отчёта: ${personData1.reportDate}\n\n### Ответы команды по инциденту 1:\n${buildIncidentAnswersText(a1)}\n\n## Инцидент 2\n${incident2}\n\n### Данные отчёта по инциденту 2\n- Фамилия: ${personData2.lastName}\n- Имя: ${personData2.firstName}\n- Отчество: ${personData2.middleName}\n- Должность: ${personData2.position}\n- Отдел: ${personData2.department}\n- Дата отчёта: ${personData2.reportDate}\n\n### Ответы команды по инциденту 2:\n${buildIncidentAnswersText(a2)}\n\n## Оцени работу команды:\nДля каждого инцидента:\n1. Проверь правильность классификации того, что произошло\n2. Проверь правильность определения причины\n3. Оцени верность определения затронутых свойств информации (конфиденциальность, целостность, доступность — триада ЦРУ)\n4. Проверь правильность определения вида угрозы\n5. Проверь правильно ли команда определила: это Событие ИБ или Инцидент ИБ\n\nПо каждому пункту напиши: правильно ли, и кратко объясни почему.\nВ конце дай общую оценку по 10-балльной шкале и краткий итог.`;
 }
 
 (async function init(){
@@ -305,8 +301,8 @@ return `Ты эксперт по информационной безопасно
     showStep(restoredStep, false);
 
     document.getElementById('btn_1').addEventListener('click', () => {
-      const personData = collectPersonData();
-      const personValidationError = validatePersonData(personData);
+      const personData1 = collectPersonData(1);
+      const personValidationError = validatePersonData(personData1);
       if (personValidationError) {
         document.getElementById('pageError').textContent = personValidationError;
         return;
@@ -337,10 +333,12 @@ return `Ты эксперт по информационной безопасно
     });
 
     document.getElementById('btn_2').addEventListener('click', async () => {
-      const personData = collectPersonData();
-      const personValidationError = validatePersonData(personData);
-      if (personValidationError) {
-        document.getElementById('pageError').textContent = personValidationError;
+      const personData1 = collectPersonData(1);
+      const personData2 = collectPersonData(2);
+      const personValidationError1 = validatePersonData(personData1);
+      const personValidationError2 = validatePersonData(personData2);
+      if (personValidationError1 || personValidationError2) {
+        document.getElementById('pageError').textContent = personValidationError1 || personValidationError2;
         return;
       }
       const a1 = collectAnswers(1);
@@ -355,14 +353,14 @@ return `Ты эксперт по информационной безопасно
       const send = await fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId, personData, answers1, answers2: a2 })
+        body: JSON.stringify({ teamId, personData1, personData2, answers1, answers2: a2 })
       });
       if (!send.ok) {
         document.getElementById('pageError').textContent = 'Не удалось отправить результаты.';
         return;
       }
 
-      document.getElementById('promptText').value = buildPrompt(personData, answers1, a2);
+      document.getElementById('promptText').value = buildPrompt(personData1, answers1, personData2, a2);
       document.getElementById('modal').classList.add('show');
       localStorage.removeItem(QUIZ_STORAGE_KEY);
     });
