@@ -15,7 +15,8 @@
     h1{font-family:'IBM Plex Mono',monospace;font-size:clamp(16px,3vw,23px)}
     .pages{position:relative;overflow:hidden}.page{transition:all .35s ease}.hidden{display:none}
     .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px}.card-header{padding:14px 20px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
-    .incident-box{padding:15px 18px;color:var(--text-dim);white-space:pre-wrap;line-height:1.55;font-family:'IBM Plex Mono',monospace;font-size:13px}
+    .incident-card{position:sticky;top:10px;z-index:5}
+    .incident-box{padding:15px 18px;color:var(--green);white-space:pre-wrap;line-height:1.55;font-family:'IBM Plex Mono',monospace;font-size:13px}
     .check-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border)} .check-item:last-child{border-bottom:none}
     .check-text{font-size:13.5px;color:var(--text-dim);flex:1}
     .toggle-group{display:flex;gap:6px}.toggle-btn{padding:5px 14px;border-radius:4px;border:1px solid var(--border);background:transparent;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;color:var(--text-muted);transition:.15s}
@@ -28,7 +29,7 @@
     .modal{width:min(920px,100%);height:min(92vh,100%);background:var(--surface);border:1px solid var(--border-active);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px}
     textarea{flex:1;background:#0b0e13;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:12px;resize:none;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.45}
     .copy-btn{background:var(--accent);border:none;color:white;padding:14px;border-radius:8px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:18px}
-    @media(max-width:700px){.props-row{flex-direction:column}.prop-item{border-right:none;border-bottom:1px solid var(--border)}.prop-item:last-child{border-bottom:none}.check-item{flex-direction:column;align-items:flex-start}}
+    @media(max-width:700px){.props-row{flex-direction:column}.prop-item{border-right:none;border-bottom:1px solid var(--border)}.prop-item:last-child{border-bottom:none}.check-item{flex-direction:column;align-items:flex-start}.incident-card{top:6px}}
   </style>
 </head>
 <body>
@@ -175,7 +176,7 @@ function createToggleItem(text, key, exclusive) {
 function renderPage(containerId, incidentNum, text, suffix) {
   const box = document.getElementById(containerId);
   box.innerHTML = `
-    <div class="card"><div class="card-header">Инцидент №${incidentNum}</div><div class="incident-box">${text}</div></div>
+    <div class="card incident-card"><div class="card-header">Инцидент №${incidentNum}</div><div class="incident-box">${text}</div></div>
     <div class="card"><div class="card-header">Укажите что произошло</div>${sections.what.map((t,i)=>createToggleItem(t,`what${i+1}_${suffix}`)).join('')}</div>
     <div class="card"><div class="card-header">Укажите почему произошло</div>${sections.why.map((t,i)=>createToggleItem(t,`why${i+1}_${suffix}`)).join('')}</div>
     <div class="card"><div class="card-header">Какие свойства информации подверглись атаке</div><div class="props-row">${sections.props.map((t,i)=>`<div class="prop-item"><span class="prop-label">${t}</span><div class="toggle-group" data-hidden="prop${i+1}_${suffix}"><button class="toggle-btn yes" onclick="toggle(this,'yes','prop${i+1}_${suffix}')">ДА</button><button class="toggle-btn no" onclick="toggle(this,'no','prop${i+1}_${suffix}')">НЕТ</button></div><input type="hidden" id="prop${i+1}_${suffix}"></div>`).join('')}</div></div>
