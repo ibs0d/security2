@@ -60,7 +60,7 @@
     <div class="modal">
       <h2 style="font-family:'IBM Plex Mono',monospace;color:var(--accent)">Промпт для Qwen</h2>
       <textarea id="promptText" readonly></textarea>
-      <button class="copy-btn" id="copyBtn">📋 Скопировать</button>
+      <button class="copy-btn" id="copyBtn">Скопировать и перейти к ассистенту преподавателя</button>
     </div>
   </div>
 
@@ -280,8 +280,14 @@ function buildIncidentAnswersText(a){
 return `Что произошло:\n- Получение подозрительного письма: ${asYesNo(a.what['1'])}\n- Обнаружение вируса: ${asYesNo(a.what['2'])}\n- Подозрительная активность после входа: ${asYesNo(a.what['3'])}\n- Передача конфиденциальной информации: ${asYesNo(a.what['4'])}\n- Звонок от руководства: ${asYesNo(a.what['5'])}\n\nПочему произошло:\n- Не распознал фишинг: ${asYesNo(a.why['1'])}\n- Ошибка при выборе получателя: ${asYesNo(a.why['2'])}\n- Простой пароль: ${asYesNo(a.why['3'])}\n- USB-накопитель: ${asYesNo(a.why['4'])}\n\nСвойства информации под угрозой:\n- Конфиденциальность: ${asYesNo(a.properties['1'])}\n- Целостность: ${asYesNo(a.properties['2'])}\n- Доступность: ${asYesNo(a.properties['3'])}\n\nВид угрозы:\n- Мошенничество: ${asYesNo(a.threat['1'])}\n- Взлом данных: ${asYesNo(a.threat['2'])}\n- Кража данных: ${asYesNo(a.threat['3'])}\n- Вирусная атака: ${asYesNo(a.threat['4'])}\n- Человеческий фактор: ${asYesNo(a.threat['5'])}\n\nТип происшествия: ${a.incidentType}`;
 }
 
+function encodeToBase64(value) {
+  return btoa(unescape(encodeURIComponent(value)));
+}
+
 function buildPrompt(personData1, a1, personData2, a2) {
-return `Ты эксперт по информационной безопасности и оцениваешь работу команды школьников.\n\n## Инцидент 1\n${incident1}\n\n### Данные отчёта по инциденту 1\n- Фамилия: ${personData1.lastName}\n- Имя: ${personData1.firstName}\n- Отчество: ${personData1.middleName}\n- Должность: ${personData1.position}\n- Отдел: ${personData1.department}\n- Дата отчёта: ${personData1.reportDate}\n\n### Ответы команды по инциденту 1:\n${buildIncidentAnswersText(a1)}\n\n## Инцидент 2\n${incident2}\n\n### Данные отчёта по инциденту 2\n- Фамилия: ${personData2.lastName}\n- Имя: ${personData2.firstName}\n- Отчество: ${personData2.middleName}\n- Должность: ${personData2.position}\n- Отдел: ${personData2.department}\n- Дата отчёта: ${personData2.reportDate}\n\n### Ответы команды по инциденту 2:\n${buildIncidentAnswersText(a2)}\n\n## Оцени работу команды:\nДля каждого инцидента:\n1. Проверь правильность классификации того, что произошло\n2. Проверь правильность определения причины\n3. Оцени верность определения затронутых свойств информации (конфиденциальность, целостность, доступность — триада ЦРУ)\n4. Проверь правильность определения вида угрозы\n5. Проверь правильно ли команда определила: это Событие ИБ или Инцидент ИБ\n\nПо каждому пункту напиши: правильно ли, и кратко объясни почему.\nВ конце дай общую оценку по 10-балльной шкале и краткий итог.`;
+const rawPrompt = `Ты эксперт по информационной безопасности и оцениваешь работу команды школьников.\n\n## Инцидент 1\n${incident1}\n\n### Данные отчёта по инциденту 1\n- Фамилия: ${personData1.lastName}\n- Имя: ${personData1.firstName}\n- Отчество: ${personData1.middleName}\n- Должность: ${personData1.position}\n- Отдел: ${personData1.department}\n- Дата отчёта: ${personData1.reportDate}\n\n### Ответы команды по инциденту 1:\n${buildIncidentAnswersText(a1)}\n\n## Инцидент 2\n${incident2}\n\n### Данные отчёта по инциденту 2\n- Фамилия: ${personData2.lastName}\n- Имя: ${personData2.firstName}\n- Отчество: ${personData2.middleName}\n- Должность: ${personData2.position}\n- Отдел: ${personData2.department}\n- Дата отчёта: ${personData2.reportDate}\n\n### Ответы команды по инциденту 2:\n${buildIncidentAnswersText(a2)}\n\n## Оцени работу команды:\nДля каждого инцидента:\n1. Проверь правильность классификации того, что произошло\n2. Проверь правильность определения причины\n3. Оцени верность определения затронутых свойств информации (конфиденциальность, целостность, доступность — триада ЦРУ)\n4. Проверь правильность определения вида угрозы\n5. Проверь правильно ли команда определила: это Событие ИБ или Инцидент ИБ\n\nПо каждому пункту напиши: правильно ли, и кратко объясни почему.\nВ конце дай общую оценку по 10-балльной шкале и краткий итог.`;
+const encodedPrompt = encodeToBase64(rawPrompt);
+return `Промпт закодирован в base64\n${encodedPrompt}`;
 }
 
 (async function init(){
@@ -366,10 +372,14 @@ return `Ты эксперт по информационной безопасно
     });
 
     document.getElementById('copyBtn').addEventListener('click', async () => {
+      const confirmed = window.confirm('Скопировать закодированный промпт и перейти к ассистенту преподавателя?');
+      if (!confirmed) return;
+
       await navigator.clipboard.writeText(document.getElementById('promptText').value);
+      window.open('https://chat.qwen.ai/', '_blank', 'noopener,noreferrer');
       const btn = document.getElementById('copyBtn');
       btn.textContent = '✓ Скопировано!';
-      setTimeout(() => btn.textContent = '📋 Скопировать', 1500);
+      setTimeout(() => btn.textContent = 'Скопировать и перейти к ассистенту преподавателя', 1500);
     });
   } catch (e) {
     document.getElementById('pageError').textContent = 'Ошибка загрузки данных команды.';
