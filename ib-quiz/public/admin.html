@@ -108,18 +108,58 @@ function getPersonDataForIncident(item, incidentNum) {
   return direct || fallback || null;
 }
 
-function personInfo(personData, incidentNum) {
+function parseDateParts(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const dotMatch = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (dotMatch) {
+    return { day: Number(dotMatch[1]), month: Number(dotMatch[2]), year: Number(dotMatch[3]) };
+  }
+  const isoMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch) {
+    return { day: Number(isoMatch[3]), month: Number(isoMatch[2]), year: Number(isoMatch[1]) };
+  }
+  return null;
+}
+
+function isSameDate(value, expectedDate) {
+  const parsedValue = parseDateParts(value);
+  const parsedExpected = parseDateParts(expectedDate);
+  if (!parsedValue || !parsedExpected) return false;
+  return parsedValue.day === parsedExpected.day
+    && parsedValue.month === parsedExpected.month
+    && parsedValue.year === parsedExpected.year;
+}
+
+function formatDateForInput(date) {
+  const formatter = new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+  return formatter.format(date);
+}
+
+function getPersonFieldBadgeClass(fieldName, value, correctValue, expectedReportDate) {
+  if (fieldName === 'reportDate') {
+    return isSameDate(value, expectedReportDate) ? 'badge yes' : 'badge no';
+  }
+  return getBadgeClass(value, correctValue);
+}
+
+function personInfo(personData, incidentNum, correctPersonData, expectedReportDate) {
   if (!personData) return '<span class="muted">Нет данных</span>';
   const normalized = normalizePersonData(personData);
-  const item = (label, value) => `<div><span class="muted">${label}:</span> ${value || '—'}</div>`;
+  const normalizedCorrect = normalizePersonData(correctPersonData);
+  const item = (label, key, value) => `<div><span class="muted">${label}:</span> <span class="${getPersonFieldBadgeClass(key, value, normalizedCorrect[key], expectedReportDate)}">${value || '—'}</span></div>`;
   return [
     `<div style="margin-bottom:6px"><strong>Инцидент ${incidentNum}</strong></div>`,
-    item('Фамилия', normalized.lastName),
-    item('Имя', normalized.firstName),
-    item('Отчество', normalized.middleName),
-    item('Должность', normalized.position),
-    item('Отдел', normalized.department),
-    item('Дата отчёта', normalized.reportDate)
+    item('Фамилия', 'lastName', normalized.lastName),
+    item('Имя', 'firstName', normalized.firstName),
+    item('Отчество', 'middleName', normalized.middleName),
+    item('Должность', 'position', normalized.position),
+    item('Отдел', 'department', normalized.department),
+    item('Дата отчёта', 'reportDate', normalized.reportDate)
   ].join('');
 }
 
@@ -151,19 +191,23 @@ async function loadSubmissions() {
     return;
   }
 
-  rows.innerHTML = submissions.map((item) => `
+  rows.innerHTML = submissions.map((item) => {
+    const correctAnswers = answerKeysByTeamId[item.teamId] || {};
+    const expectedReportDate = formatDateForInput(new Date(item.timestamp || Date.now()));
+    return `
     <tr>
       <td>${new Date(item.timestamp).toLocaleString('ru-RU')}</td>
       <td>Команда ${item.teamId}</td>
       <td>
-        ${personInfo(getPersonDataForIncident(item, 1), 1)}
+        ${personInfo(getPersonDataForIncident(item, 1), 1, correctAnswers.personData1, expectedReportDate)}
         <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
-        ${personInfo(getPersonDataForIncident(item, 2), 2)}
+        ${personInfo(getPersonDataForIncident(item, 2), 2, correctAnswers.personData2, expectedReportDate)}
       </td>
-      <td>${brief(item.answers1, answerKeysByTeamId[item.teamId]?.answers1)}</td>
-      <td>${brief(item.answers2, answerKeysByTeamId[item.teamId]?.answers2)}</td>
+      <td>${brief(item.answers1, correctAnswers.answers1)}</td>
+      <td>${brief(item.answers2, correctAnswers.answers2)}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 document.getElementById('refreshBtn').addEventListener('click', loadSubmissions);
