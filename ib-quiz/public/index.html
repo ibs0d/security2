@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IB Quiz — Вход команды</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f14; --surface: #13161d; --surface2: #1a1e28; --border: #252a38;
+      --accent: #3b82f6; --green: #22c55e; --red: #ef4444; --text: #e2e8f0; --text-muted: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; min-height: 100vh; display: grid; place-items: center; padding: 20px; }
+    body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(59,130,246,.03) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; }
+    .box { position: relative; z-index: 1; width: 100%; max-width: 680px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 28px; }
+    h1 { font-family: 'IBM Plex Mono', monospace; text-align: center; font-size: clamp(20px, 3vw, 30px); margin-bottom: 10px; }
+    p.sub { color: var(--text-muted); text-align: center; margin-bottom: 24px; }
+    .teams { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+    .team-btn, .action-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 14px; cursor: pointer; transition: .2s; font-family: 'IBM Plex Mono', monospace; }
+    .team-btn:hover, .team-btn.active, .action-btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+    .pin-wrap { margin-top: 18px; display: none; gap: 10px; align-items: center; }
+    .pin-wrap.show { display: flex; }
+    input { flex: 1; background: #0b0e13; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 18px; letter-spacing: 0.22em; text-align: center; }
+    input:focus { outline: none; border-color: var(--accent); }
+    .error { color: var(--red); margin-top: 10px; min-height: 20px; }
+    .shake { animation: shake .35s; }
+    @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  </style>
+</head>
+<body>
+  <main class="box">
+    <h1>Выбор команды</h1>
+    <p class="sub">Тренировочное задание по информационной безопасности</p>
+
+    <section class="teams" id="teams">
+      <button class="team-btn" data-team="1">Команда 1</button>
+      <button class="team-btn" data-team="2">Команда 2</button>
+      <button class="team-btn" data-team="3">Команда 3</button>
+    </section>
+
+    <section id="pinWrap" class="pin-wrap">
+      <input id="pinInput" type="password" maxlength="4" inputmode="numeric" placeholder="PIN (4 цифры)">
+      <button class="action-btn" id="loginBtn">Войти</button>
+    </section>
+    <div class="error" id="errorBox"></div>
+  </main>
+
+  <script>
+    let selectedTeam = null;
+    const teamButtons = document.querySelectorAll('.team-btn');
+    const pinWrap = document.getElementById('pinWrap');
+    const pinInput = document.getElementById('pinInput');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorBox = document.getElementById('errorBox');
+
+    teamButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        teamButtons.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedTeam = Number(btn.dataset.team);
+        pinWrap.classList.add('show');
+        pinInput.focus();
+        errorBox.textContent = '';
+      });
+    });
+
+    async function verifyPin() {
+      if (!selectedTeam) return;
+      const pin = pinInput.value.trim();
+
+      const response = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId: selectedTeam, pin })
+      });
+      const data = await response.json();
+
+      if (data.ok) {
+        localStorage.setItem('teamId', String(selectedTeam));
+        window.location.href = '/quiz';
+        return;
+      }
+
+      errorBox.textContent = 'Неверный пин-код';
+      pinInput.classList.remove('shake');
+      void pinInput.offsetWidth;
+      pinInput.classList.add('shake');
+    }
+
+    loginBtn.addEventListener('click', verifyPin);
+    pinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') verifyPin();
+    });
+  </script>
+</body>
+</html>
