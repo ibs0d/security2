@@ -112,11 +112,16 @@ function renderPage(containerId, incidentNum, text, suffix) {
     <div class="card"><div class="card-header">Какие свойства информации подверглись атаке</div><div class="props-row">${sections.props.map((t,i)=>`<div class="prop-item"><span class="prop-label">${t}</span><div class="toggle-group" data-hidden="prop${i+1}_${suffix}"><button class="toggle-btn yes" onclick="toggle(this,'yes','prop${i+1}_${suffix}')">ДА</button><button class="toggle-btn no" onclick="toggle(this,'no','prop${i+1}_${suffix}')">НЕТ</button></div><input type="hidden" id="prop${i+1}_${suffix}"></div>`).join('')}</div></div>
     <div class="card"><div class="card-header">Укажите вид угрозы ИБ</div>${sections.threat.map((t,i)=>createToggleItem(t,`thr${i+1}_${suffix}`)).join('')}</div>
     <div class="card"><div class="card-header">О каком происшествии идёт речь</div><div class="props-row"><div class="prop-item"><span class="prop-label">Событие ИБ</span><div class="toggle-group" data-hidden="inc1_${suffix}"><button class="toggle-btn yes" onclick="toggleExclusive(this,'yes','inc1_${suffix}','inc2_${suffix}')">ДА</button><button class="toggle-btn no" onclick="toggleExclusive(this,'no','inc1_${suffix}','inc2_${suffix}')">НЕТ</button></div><input type="hidden" id="inc1_${suffix}"></div><div class="prop-item"><span class="prop-label">Инцидент ИБ</span><div class="toggle-group" data-hidden="inc2_${suffix}"><button class="toggle-btn yes" onclick="toggleExclusive(this,'yes','inc2_${suffix}','inc1_${suffix}')">ДА</button><button class="toggle-btn no" onclick="toggleExclusive(this,'no','inc2_${suffix}','inc1_${suffix}')">НЕТ</button></div><input type="hidden" id="inc2_${suffix}"></div></div></div>
+    <div class="submit-section">
+      ${suffix===2 ? '<button class="submit-btn" style="margin-right:10px;background:#1f2937;border:1px solid var(--border)" id="back_2">← Назад</button>' : ''}
+      <button class="submit-btn" id="btn_${suffix}">${suffix===1?'Далее →':'Отправить и получить промпт'}</button>
+    </div>
     <div class="submit-section"><button class="submit-btn" id="btn_${suffix}">${suffix===1?'Далее →':'Отправить и получить промпт'}</button></div>
   `;
 }
 
 function collectAnswers(suffix) {
+  const pick = (prefix, count) => Object.fromEntries(Array.from({length:count}, (_,i)=>[String(i+1), document.getElementById(`${prefix}${i+1}_${suffix}`).value || '']));
   const pick = (prefix, count) => Object.fromEntries(Array.from({length:count}, (_,i)=>[String(i+1), document.getElementById(`${prefix}${i+1}_${suffix}`).value || 'НЕТ']));
   const type = document.getElementById(`inc1_${suffix}`).value === 'ДА' ? 'Событие ИБ' : (document.getElementById(`inc2_${suffix}`).value === 'ДА' ? 'Инцидент ИБ' : '');
   return {
@@ -125,6 +130,8 @@ function collectAnswers(suffix) {
 }
 
 function isValid(a) {
+  const filled = (obj) => Object.values(obj).every((v) => v === 'ДА' || v === 'НЕТ');
+  return filled(a.what) && filled(a.why) && filled(a.properties) && filled(a.threat) && Boolean(a.incidentType);
   const hasYes = (obj) => Object.values(obj).some((v) => v === 'ДА');
   return hasYes(a.what) && hasYes(a.why) && hasYes(a.properties) && hasYes(a.threat) && Boolean(a.incidentType);
 }
@@ -152,6 +159,7 @@ return `Ты эксперт по информационной безопасно
     document.getElementById('btn_1').addEventListener('click', () => {
       const a1 = collectAnswers(1);
       if (!isValid(a1)) {
+        document.getElementById('pageError').textContent = 'Пожалуйста, ответьте на все вопросы по инциденту №1.';
         document.getElementById('pageError').textContent = 'Заполните все разделы: в каждом должен быть хотя бы один ответ ДА.';
         return;
       }
@@ -162,6 +170,17 @@ return `Ты эксперт по информационной безопасно
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
+    document.getElementById('back_2').addEventListener('click', () => {
+      document.getElementById('pageError').textContent = '';
+      document.getElementById('page2').classList.add('hidden');
+      document.getElementById('page1').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    document.getElementById('btn_2').addEventListener('click', async () => {
+      const a2 = collectAnswers(2);
+      if (!isValid(a2)) {
+        document.getElementById('pageError').textContent = 'Пожалуйста, ответьте на все вопросы по инциденту №2.';
     document.getElementById('btn_2').addEventListener('click', async () => {
       const a2 = collectAnswers(2);
       if (!isValid(a2)) {
