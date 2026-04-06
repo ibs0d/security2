@@ -578,7 +578,15 @@ async function renderAssistantResult(personData1, personData2, result1, result2)
         const send = await fetch('/api/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ teamId, personData1, personData2, answers1, answers2: a2 })
+          body: JSON.stringify({
+            teamId,
+            personData1,
+            personData2,
+            incidentText1: incident1,
+            incidentText2: incident2,
+            answers1,
+            answers2: a2
+          })
         });
         if (!send.ok) {
           document.getElementById('pageError').textContent = 'Не удалось отправить результаты.';

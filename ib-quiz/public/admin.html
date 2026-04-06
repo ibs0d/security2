@@ -81,6 +81,27 @@ function isCorrect(value, correctValue) {
   return norm(value) === norm(correctValue);
 }
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderIncidentText(text) {
+  if (!text) return '';
+  return `
+    <div style="margin-bottom:10px">
+      <div class="muted" style="margin-bottom:4px">Текст инцидента</div>
+      <div style="padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);white-space:pre-wrap;line-height:1.45">
+        ${escapeHtml(text)}
+      </div>
+    </div>
+  `;
+}
+
 function renderSection(title, obj, correctObj, labelList) {
   if (!obj) return '';
   const items = Object.entries(obj).map(([k, v]) => {
@@ -104,11 +125,12 @@ function personInfo(personData) {
   return `<div style="margin-bottom:10px;font-size:12px">${parts.join(' &nbsp; ')}</div>`;
 }
 
-function brief(answers, correctAnswers, personData) {
+function brief(answers, correctAnswers, personData, incidentText) {
   if (!answers) return '<span class="muted">Нет данных</span>';
   const typeCorrect = isCorrect(answers.incidentType, correctAnswers?.incidentType);
   const typeCls = typeCorrect === null ? 'badge' : typeCorrect ? 'badge yes' : 'badge no';
   return [
+    renderIncidentText(incidentText),
     personInfo(personData),
     renderSection('Что произошло', answers.what, correctAnswers?.what, labels.what),
     renderSection('Почему произошло', answers.why, correctAnswers?.why, labels.why),
@@ -132,13 +154,21 @@ async function loadSubmissions() {
 
   const submissions = await response.json();
   const answerKeysByTeamId = {};
+  const scenariosByTeamId = {};
   const teamIds = [...new Set(submissions.map((item) => Number(item.teamId)).filter(Boolean))];
   await Promise.all(teamIds.map(async (teamId) => {
-    const answerResponse = await fetch(`/api/answer-keys/${teamId}`, {
-      headers: { Authorization: `Bearer ${adminPassword}` }
-    });
-    if (!answerResponse.ok) return;
-    answerKeysByTeamId[teamId] = await answerResponse.json();
+    const [answerResponse, scenarioResponse] = await Promise.all([
+      fetch(`/api/answer-keys/${teamId}`, {
+        headers: { Authorization: `Bearer ${adminPassword}` }
+      }),
+      fetch(`/api/scenarios/${teamId}`)
+    ]);
+    if (answerResponse.ok) {
+      answerKeysByTeamId[teamId] = await answerResponse.json();
+    }
+    if (scenarioResponse.ok) {
+      scenariosByTeamId[teamId] = await scenarioResponse.json();
+    }
   }));
 
   if (!submissions.length) {
@@ -148,12 +178,15 @@ async function loadSubmissions() {
 
   rows.innerHTML = submissions.map((item) => {
     const correctAnswers = answerKeysByTeamId[item.teamId] || {};
+    const scenario = scenariosByTeamId[item.teamId] || {};
+    const incidentText1 = item.incidentText1 || scenario.incident1 || '';
+    const incidentText2 = item.incidentText2 || scenario.incident2 || '';
     return `
     <tr>
       <td>${new Date(item.timestamp).toLocaleString('ru-RU')}</td>
       <td>Команда ${item.teamId}</td>
-      <td>${brief(item.answers1, correctAnswers.answers1, item.personData1 || item.personData)}</td>
-      <td>${brief(item.answers2, correctAnswers.answers2, item.personData2 || item.personData)}</td>
+      <td>${brief(item.answers1, correctAnswers.answers1, item.personData1 || item.personData, incidentText1)}</td>
+      <td>${brief(item.answers2, correctAnswers.answers2, item.personData2 || item.personData, incidentText2)}</td>
     </tr>
   `;
   }).join('');
