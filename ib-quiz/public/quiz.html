@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IB Quiz — Викторина</title>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root { --bg:#f8fafc; --surface:#ffffff; --surface2:#f1f5f9; --border:#e2e8f0; --border-active:#2563eb; --text:#1e293b; --text-muted:#64748b; --text-dim:#475569; --accent:#2563eb; --green:#16a34a; --red:#dc2626; --yes-bg:rgba(22,163,74,.08); --yes-border:rgba(22,163,74,.3); --no-bg:rgba(220,38,38,.06); --no-border:rgba(220,38,38,.2); }
-    *{box-sizing:border-box;margin:0;padding:0} body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;padding:30px 16px 70px}
+    *{box-sizing:border-box;margin:0;padding:0} body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-weight:500;min-height:100vh;padding:30px 16px 70px}
     body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.06) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
     .wrapper{max-width:860px;margin:0 auto;position:relative;z-index:1}.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
     .link{color:var(--text-muted);text-decoration:none;font-family:'IBM Plex Mono',monospace;font-size:12px}.link:hover{color:var(--accent)}
@@ -18,7 +18,7 @@
     .incident-card{position:sticky;top:10px;z-index:5}
     .incident-box{padding:15px 18px;color:var(--text);white-space:pre-wrap;line-height:1.55;font-family:'IBM Plex Mono',monospace;font-size:13px}
     .check-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border)} .check-item:last-child{border-bottom:none}
-    .check-text{font-size:13.5px;color:var(--text-dim);flex:1}
+    .check-text{font-size:13.5px;color:var(--text-dim);font-weight:600;flex:1}
     .toggle-group{display:flex;gap:6px}.toggle-btn{padding:5px 14px;border-radius:4px;border:1px solid var(--border);background:transparent;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;color:var(--text-muted);transition:.15s}
     .toggle-btn.yes.active{background:var(--yes-bg);border-color:var(--yes-border);color:var(--green)} .toggle-btn.no.active{background:var(--no-bg);border-color:var(--no-border);color:var(--red)}
     .props-row{display:flex}.prop-item{flex:1;padding:16px;border-right:1px solid var(--border);text-align:center}.prop-item:last-child{border-right:none}.prop-label{display:block;margin-bottom:10px;color:var(--text-dim)}
@@ -30,7 +30,7 @@
     .manual-field{display:flex;flex-direction:column;gap:6px}
     .manual-field.full{grid-column:1/-1}
     .manual-field label{font-size:12px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace}
-    .manual-field input{background:#ffffff;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:14px}
+    .manual-field input{background:#ffffff;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:14px;font-weight:600}
     .manual-field input:focus{outline:none;border-color:var(--border-active)}
     .assistant-block{margin-top:18px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px}
     .assistant-block.hidden{display:none}
