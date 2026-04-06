@@ -18,6 +18,9 @@ const TEAMS_FILE = path.join(CONFIG_DIR, 'teams.json');
 const SUBMISSIONS_FILE = path.join(DATA_DIR, 'submissions.json');
 const ANSWER_KEYS_DIR = path.join(CONFIG_DIR, 'answer-keys');
 
+const teamProgress = {};
+const sseClients = new Set();
+
 app.use(express.json());
 app.use(express.static(PUBLIC_DIR));
 
@@ -182,9 +185,41 @@ app.delete('/api/submissions', adminAuth, async (_req, res) => {
   }
 });
 
+app.post('/api/progress', (req, res) => {
+  const { teamId, filled, total } = req.body || {};
+  const id = Number(teamId);
+  if (!id || typeof filled !== 'number' || typeof total !== 'number') {
+    return res.status(400).json({ error: 'Некорректные данные прогресса' });
+  }
+  teamProgress[id] = { filled, total, percent: total > 0 ? Math.round((filled / total) * 100) : 0, updatedAt: Date.now() };
+
+  const payload = `data: ${JSON.stringify(teamProgress)}\n\n`;
+  for (const client of sseClients) {
+    client.write(payload);
+  }
+
+  return res.json({ ok: true });
+});
+
+app.get('/api/progress', (_req, res) => {
+  return res.json(teamProgress);
+});
+
+app.get('/api/progress/stream', (_req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive'
+  });
+  res.write(`data: ${JSON.stringify(teamProgress)}\n\n`);
+  sseClients.add(res);
+  _req.on('close', () => sseClients.delete(res));
+});
+
 app.get('/', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
 app.get('/quiz', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'quiz.html')));
 app.get('/admin', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
+app.get('/dashboard', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html')));
 
 app.listen(PORT, '0.0.0.0', () => {
   // eslint-disable-next-line no-console
