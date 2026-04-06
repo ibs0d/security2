@@ -7,21 +7,21 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0d0f14; --surface: #13161d; --surface2: #1a1e28; --border: #252a38;
-      --accent: #3b82f6; --green: #22c55e; --red: #ef4444; --yellow: #eab308;
-      --text: #e2e8f0; --text-muted: #64748b;
+      --bg: #f8fafc; --surface: #ffffff; --surface2: #f1f5f9; --border: #e2e8f0;
+      --accent: #2563eb; --green: #16a34a; --red: #dc2626; --yellow: #ca8a04;
+      --text: #1e293b; --text-muted: #64748b;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-    body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(59,130,246,.03) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; }
+    body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(59,130,246,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,.06) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; }
     .container { position: relative; z-index: 1; width: 100%; max-width: 760px; }
     .header { text-align: center; margin-bottom: 32px; }
     .header h1 { font-family: 'IBM Plex Mono', monospace; font-size: clamp(18px, 3vw, 26px); margin-bottom: 8px; }
     .header p { color: var(--text-muted); font-size: 14px; }
     .live-dot { display: inline-block; width: 8px; height: 8px; background: var(--green); border-radius: 50%; margin-right: 6px; animation: pulse 2s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
-    .team-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 16px; transition: border-color .3s; }
-    .team-card.active { border-color: rgba(59,130,246,.4); }
+    .team-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 16px; transition: border-color .3s; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .team-card.active { border-color: rgba(37,99,235,.4); }
     .team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     .team-name { font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; }
     .team-percent { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600; }
