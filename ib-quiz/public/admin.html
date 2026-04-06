@@ -33,7 +33,7 @@
     <p class="muted" id="msg"></p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Время</th><th>Команда</th><th>Анкета</th><th>Инцидент 1 (кратко)</th><th>Инцидент 2 (кратко)</th></tr></thead>
+        <thead><tr><th>Время</th><th>Команда</th><th>Инцидент 1</th><th>Инцидент 2</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
@@ -44,128 +44,64 @@ const adminPassword = prompt('Введите пароль администрат
 const rows = document.getElementById('rows');
 const msg = document.getElementById('msg');
 
-function normalizeAnswerValue(value) {
-  return String(value || '').trim().toLocaleLowerCase('ru-RU');
+const labels = {
+  what: [
+    'Получение подозрительного письма с вредоносной ссылкой или вложением',
+    'Обнаружение вируса на рабочей станции',
+    'Подозрительная активность после успешного входа',
+    'Передача конфиденциальной информации сторонним лицам',
+    'Звонок от «руководства» с запросом конфиденциальных данных'
+  ],
+  why: [
+    'Сотрудник не распознал признаки фишингового письма',
+    'Человеческая ошибка при выборе получателя в почтовом клиенте',
+    'Сотрудник использовал слишком простой пароль',
+    'Сотрудник подключил личный USB-накопитель в обход политики ИБ'
+  ],
+  properties: [
+    'Конфиденциальность',
+    'Целостность',
+    'Доступность'
+  ],
+  threat: [
+    'Мошенничество',
+    'Взлом данных',
+    'Кража данных',
+    'Вирусная атака',
+    'Человеческий фактор'
+  ]
+};
+
+function norm(v) {
+  return String(v || '').trim().toLocaleLowerCase('ru-RU');
 }
 
-function getBadgeClass(value, correctValue) {
-  if (!correctValue) return 'badge';
-  return normalizeAnswerValue(value) === normalizeAnswerValue(correctValue) ? 'badge yes' : 'badge no';
+function isCorrect(value, correctValue) {
+  if (!correctValue) return null;
+  return norm(value) === norm(correctValue);
 }
 
-function badges(label, obj, correctObj) {
-  return `<div><div class="muted" style="margin-bottom:4px">${label}</div><div class="badges">${Object.entries(obj || {}).map(([k,v]) => `<span class="${getBadgeClass(v, correctObj?.[k])}">${k}:${v}</span>`).join('')}</div></div>`;
+function renderSection(title, obj, correctObj, labelList) {
+  if (!obj) return '';
+  const items = Object.entries(obj).map(([k, v]) => {
+    const label = labelList[Number(k) - 1] || k;
+    const correct = isCorrect(v, correctObj?.[k]);
+    const cls = correct === null ? 'badge' : correct ? 'badge yes' : 'badge no';
+    return `<span class="${cls}">${label}</span>`;
+  }).join('');
+  return `<div style="margin-bottom:8px"><div class="muted" style="margin-bottom:4px">${title}</div><div class="badges">${items}</div></div>`;
 }
 
 function brief(answers, correctAnswers) {
   if (!answers) return '<span class="muted">Нет данных</span>';
-  const incidentTypeClass = getBadgeClass(answers.incidentType, correctAnswers?.incidentType);
+  const typeCorrect = isCorrect(answers.incidentType, correctAnswers?.incidentType);
+  const typeCls = typeCorrect === null ? 'badge' : typeCorrect ? 'badge yes' : 'badge no';
   return [
-    badges('Что произошло', answers.what, correctAnswers?.what),
-    badges('Почему произошло', answers.why, correctAnswers?.why),
-    badges('Свойства', answers.properties, correctAnswers?.properties),
-    badges('Угроза', answers.threat, correctAnswers?.threat),
-    `<div style="margin-top:8px"><span class="muted">Тип:</span> <span class="${incidentTypeClass}">${answers.incidentType || '—'}</span></div>`
-  ].join('');
-}
-
-function pickFirstValue(source, aliases) {
-  if (!source || typeof source !== 'object') return '';
-  for (const key of aliases) {
-    const value = source[key];
-    if (typeof value === 'string' && value.trim()) {
-      return value.trim();
-    }
-  }
-  return '';
-}
-
-function normalizePersonData(personData) {
-  const src = personData || {};
-  return {
-    firstName: pickFirstValue(src, ['firstName', 'firstname', 'first_name', 'name', 'givenName', 'Имя']),
-    reportDate: pickFirstValue(src, ['reportDate', 'report_date', 'date', 'reportingDate', 'Дата отчёта', 'Дата отчета'])
-  };
-}
-
-
-function hasPersonFields(personData) {
-  if (!personData || typeof personData !== 'object') return false;
-  return Object.values(normalizePersonData(personData)).some(Boolean);
-}
-
-function getPersonDataForIncident(item, incidentNum) {
-  const direct = item[`personData${incidentNum}`];
-  if (hasPersonFields(direct)) return direct;
-
-  const fallback = item.personData;
-  if (hasPersonFields(fallback)) return fallback;
-
-  return direct || fallback || null;
-}
-
-function parseDateParts(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return null;
-  const dotMatch = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  if (dotMatch) {
-    return { day: Number(dotMatch[1]), month: Number(dotMatch[2]), year: Number(dotMatch[3]) };
-  }
-  const isoMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (isoMatch) {
-    return { day: Number(isoMatch[3]), month: Number(isoMatch[2]), year: Number(isoMatch[1]) };
-  }
-  return null;
-}
-
-function isSameDate(value, expectedDate) {
-  const parsedValue = parseDateParts(value);
-  const parsedExpected = parseDateParts(expectedDate);
-  if (!parsedValue || !parsedExpected) return false;
-  return parsedValue.day === parsedExpected.day
-    && parsedValue.month === parsedExpected.month
-    && parsedValue.year === parsedExpected.year;
-}
-
-function formatDateForInput(date) {
-  const formatter = new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-  return formatter.format(date);
-}
-
-function resolveExpectedReportDate(correctValue) {
-  const normalizedCorrectValue = normalizeAnswerValue(correctValue);
-  if (normalizedCorrectValue === 'сегодня') {
-    return formatDateForInput(new Date());
-  }
-  if (normalizedCorrectValue === 'вчера') {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    return formatDateForInput(yesterday);
-  }
-  return correctValue;
-}
-
-function getPersonFieldBadgeClass(fieldName, value, correctValue) {
-  if (fieldName === 'reportDate') {
-    const expectedReportDate = resolveExpectedReportDate(correctValue);
-    return isSameDate(value, expectedReportDate) ? 'badge yes' : 'badge no';
-  }
-  return getBadgeClass(value, correctValue);
-}
-
-function personInfo(personData, incidentNum, correctPersonData) {
-  if (!personData) return '<span class="muted">Нет данных</span>';
-  const normalized = normalizePersonData(personData);
-  const normalizedCorrect = normalizePersonData(correctPersonData);
-  const item = (label, key, value) => `<div><span class="muted">${label}:</span> <span class="${getPersonFieldBadgeClass(key, value, normalizedCorrect[key])}">${value || '—'}</span></div>`;
-  return [
-    `<div style="margin-bottom:6px"><strong>Инцидент ${incidentNum}</strong></div>`,
-    item('Имя', 'firstName', normalized.firstName),
-    item('Дата отчёта', 'reportDate', normalized.reportDate)
+    renderSection('Что произошло', answers.what, correctAnswers?.what, labels.what),
+    renderSection('Почему произошло', answers.why, correctAnswers?.why, labels.why),
+    renderSection('Свойства', answers.properties, correctAnswers?.properties, labels.properties),
+    renderSection('Угроза', answers.threat, correctAnswers?.threat, labels.threat),
+    `<div style="margin-top:4px"><span class="muted">Тип:</span> <span class="${typeCls}">${answers.incidentType || '—'}</span></div>`
   ].join('');
 }
 
@@ -193,7 +129,7 @@ async function loadSubmissions() {
   }));
 
   if (!submissions.length) {
-    rows.innerHTML = '<tr><td colspan="5" class="muted">Пока нет отправок.</td></tr>';
+    rows.innerHTML = '<tr><td colspan="4" class="muted">Пока нет отправок.</td></tr>';
     return;
   }
 
@@ -203,11 +139,6 @@ async function loadSubmissions() {
     <tr>
       <td>${new Date(item.timestamp).toLocaleString('ru-RU')}</td>
       <td>Команда ${item.teamId}</td>
-      <td>
-        ${personInfo(getPersonDataForIncident(item, 1), 1, correctAnswers.personData1)}
-        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
-        ${personInfo(getPersonDataForIncident(item, 2), 2, correctAnswers.personData2)}
-      </td>
       <td>${brief(item.answers1, correctAnswers.answers1)}</td>
       <td>${brief(item.answers2, correctAnswers.answers2)}</td>
     </tr>
