@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IB Quiz — Прогресс команд</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f14; --surface: #13161d; --surface2: #1a1e28; --border: #252a38;
+      --accent: #3b82f6; --green: #22c55e; --red: #ef4444; --yellow: #eab308;
+      --text: #e2e8f0; --text-muted: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+    body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(59,130,246,.03) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; }
+    .container { position: relative; z-index: 1; width: 100%; max-width: 760px; }
+    .header { text-align: center; margin-bottom: 32px; }
+    .header h1 { font-family: 'IBM Plex Mono', monospace; font-size: clamp(18px, 3vw, 26px); margin-bottom: 8px; }
+    .header p { color: var(--text-muted); font-size: 14px; }
+    .live-dot { display: inline-block; width: 8px; height: 8px; background: var(--green); border-radius: 50%; margin-right: 6px; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+    .team-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 16px; transition: border-color .3s; }
+    .team-card.active { border-color: rgba(59,130,246,.4); }
+    .team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .team-name { font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; }
+    .team-percent { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600; }
+    .progress-track { background: var(--surface2); border-radius: 6px; height: 28px; overflow: hidden; position: relative; }
+    .progress-fill { height: 100%; border-radius: 6px; transition: width .5s ease, background .5s ease; min-width: 0; }
+    .progress-fill.low { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .progress-fill.mid { background: linear-gradient(90deg, #eab308, #facc15); }
+    .progress-fill.high { background: linear-gradient(90deg, #22c55e, #4ade80); }
+    .progress-fill.complete { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .team-details { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; }
+    .status-idle { color: var(--text-muted); }
+    .status-working { color: var(--yellow); }
+    .status-done { color: var(--green); }
+    .no-data { text-align: center; color: var(--text-muted); padding: 40px 0; font-family: 'IBM Plex Mono', monospace; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><span class="live-dot"></span>Прогресс команд</h1>
+      <p>Заполнение формы в реальном времени</p>
+    </div>
+    <div id="teams">
+      <div class="no-data">Ожидание данных от команд...</div>
+    </div>
+  </div>
+
+<script>
+const teamsContainer = document.getElementById('teams');
+const teamNames = { 1: 'Команда 1', 2: 'Команда 2', 3: 'Команда 3' };
+
+function getBarClass(percent) {
+  if (percent >= 100) return 'complete';
+  if (percent >= 60) return 'high';
+  if (percent >= 30) return 'mid';
+  return 'low';
+}
+
+function getStatusText(teamData) {
+  if (!teamData) return { text: 'Не начали', cls: 'status-idle' };
+  if (teamData.percent >= 100) return { text: 'Завершено', cls: 'status-done' };
+  const ago = Math.round((Date.now() - teamData.updatedAt) / 1000);
+  if (ago > 120) return { text: `Неактивны ${Math.round(ago / 60)} мин`, cls: 'status-idle' };
+  return { text: 'Заполняют...', cls: 'status-working' };
+}
+
+function render(progress) {
+  const teamIds = [1, 2, 3];
+  const hasAnyData = teamIds.some((id) => progress[id]);
+
+  if (!hasAnyData) {
+    teamsContainer.innerHTML = '<div class="no-data">Ожидание данных от команд...</div>';
+    return;
+  }
+
+  teamsContainer.innerHTML = teamIds.map((id) => {
+    const data = progress[id];
+    const percent = data ? data.percent : 0;
+    const filled = data ? data.filled : 0;
+    const total = data ? data.total : 0;
+    const status = getStatusText(data);
+    const isActive = data && data.updatedAt && (Date.now() - data.updatedAt < 120000);
+
+    return `
+      <div class="team-card${isActive ? ' active' : ''}">
+        <div class="team-header">
+          <span class="team-name">${teamNames[id] || 'Команда ' + id}</span>
+          <span class="team-percent">${percent}%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill ${getBarClass(percent)}" style="width: ${percent}%"></div>
+        </div>
+        <div class="team-details">
+          <span>${filled} / ${total} полей</span>
+          <span class="${status.cls}">${status.text}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function connectSSE() {
+  const source = new EventSource('/api/progress/stream');
+  source.onmessage = (event) => {
+    try {
+      const progress = JSON.parse(event.data);
+      render(progress);
+    } catch (e) {}
+  };
+  source.onerror = () => {
+    source.close();
+    setTimeout(connectSSE, 3000);
+  };
+}
+
+connectSSE();
+</script>
+</body>
+</html>

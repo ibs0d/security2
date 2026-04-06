@@ -105,11 +105,27 @@ function showStep(step, pushHistory = false) {
   }
 }
 
+function reportProgress() {
+  const allFields = document.querySelectorAll('input[id]');
+  let filled = 0;
+  let total = 0;
+  allFields.forEach((input) => {
+    total++;
+    if (input.value && input.value.trim()) filled++;
+  });
+  fetch('/api/progress', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamId, filled, total })
+  }).catch(() => {});
+}
+
 function saveDraft() {
   const savedInputs = Array.from(document.querySelectorAll('input[id]'));
   const values = Object.fromEntries(savedInputs.map((input) => [input.id, input.value || '']));
   const payload = { step: getCurrentStep(), values };
   localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(payload));
+  reportProgress();
 }
 
 function restoreDraft() {
@@ -294,6 +310,7 @@ return `Промпт закодирован в base64\n${encodedPrompt}`;
     });
     const restoredStep = restoreDraft();
     showStep(restoredStep, false);
+    reportProgress();
 
     document.getElementById('btn_1').addEventListener('click', () => {
       const personData1 = collectPersonData(1);
