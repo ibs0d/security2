@@ -87,7 +87,8 @@ function renderSection(title, obj, correctObj, labelList) {
     const label = labelList[Number(k) - 1] || k;
     const correct = isCorrect(v, correctObj?.[k]);
     const cls = correct === null ? 'badge' : correct ? 'badge yes' : 'badge no';
-    return `<span class="${cls}">${label}</span>`;
+    const participantAnswer = v ? ` (${v})` : '';
+    return `<span class="${cls}">${label}${participantAnswer}</span>`;
   }).join('');
   return `<div style="margin-bottom:8px"><div class="muted" style="margin-bottom:4px">${title}</div><div class="badges">${items}</div></div>`;
 }
