@@ -24,6 +24,8 @@
     input { flex: 1; background: #ffffff; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 18px; font-weight: 600; letter-spacing: 0.22em; text-align: center; }
     input:focus { outline: none; border-color: var(--accent); }
     .error { color: var(--red); margin-top: 10px; min-height: 20px; }
+    .quick-links { margin-top: 20px; display: grid; gap: 10px; }
+    .quick-links a { text-decoration: none; text-align: center; }
     .shake { animation: shake .35s; }
     @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
   </style>
@@ -49,6 +51,11 @@
       <p class="sub" style="margin-bottom:12px">Не знаете как заполнять форму?</p>
       <button class="action-btn" id="demoBtn" style="width:100%">Демо — посмотреть пример</button>
     </div>
+
+    <section class="quick-links">
+      <a class="action-btn" href="/admin">Админ-панель</a>
+      <a class="action-btn" href="/dashboard">Статус выполнения</a>
+    </section>
   </main>
 
   <script>
