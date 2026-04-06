@@ -103,20 +103,41 @@ function render(progress) {
   }).join('');
 }
 
+async function loadProgressSnapshot() {
+  try {
+    const response = await fetch('/api/progress', { cache: 'no-store' });
+    if (!response.ok) return;
+    const progress = await response.json();
+    render(progress || {});
+  } catch (e) {}
+}
+
 function connectSSE() {
+  let gotMessage = false;
   const source = new EventSource('/api/progress/stream');
+
   source.onmessage = (event) => {
     try {
       const progress = JSON.parse(event.data);
-      render(progress);
+      gotMessage = true;
+      render(progress || {});
     } catch (e) {}
   };
+
   source.onerror = () => {
     source.close();
     setTimeout(connectSSE, 3000);
   };
+
+  setTimeout(() => {
+    if (!gotMessage) {
+      loadProgressSnapshot();
+    }
+  }, 2000);
 }
 
+loadProgressSnapshot();
+setInterval(loadProgressSnapshot, 5000);
 connectSSE();
 </script>
 </body>
