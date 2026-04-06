@@ -75,7 +75,9 @@ function parseSimpleYaml(yamlText) {
 }
 
 async function readTeamAnswerKey(teamId) {
-  const yamlPath = path.join(ANSWER_KEYS_DIR, `team${teamId}.yaml`);
+  const isDemo = String(teamId) === 'demo';
+  const fileName = isDemo ? 'demo.yaml' : `team${teamId}.yaml`;
+  const yamlPath = path.join(ANSWER_KEYS_DIR, fileName);
   const yamlRaw = await fs.readFile(yamlPath, 'utf-8');
   return parseSimpleYaml(yamlRaw);
 }
@@ -183,8 +185,9 @@ app.get('/api/answer-keys/:teamId', adminAuth, async (req, res) => {
 
 app.get('/api/team-answer-key/:teamId', async (req, res) => {
   try {
-    const teamId = Number(req.params.teamId);
-    if (!Number.isInteger(teamId) || teamId < 1) {
+    const rawTeamId = req.params.teamId;
+    const teamId = rawTeamId === 'demo' ? 'demo' : Number(rawTeamId);
+    if (teamId !== 'demo' && (!Number.isInteger(teamId) || teamId < 1)) {
       return res.status(400).json({ error: 'Некорректный teamId' });
     }
 

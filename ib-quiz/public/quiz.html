@@ -261,7 +261,7 @@ function renderPage(containerId, incidentNum, text, suffix) {
     <div class="card"><div class="card-header">О каком происшествии идёт речь</div><div class="props-row"><div class="prop-item"><span class="prop-label">Событие ИБ</span><div class="toggle-group" data-hidden="inc1_${suffix}"><button class="toggle-btn yes" onclick="toggleExclusive(this,'yes','inc1_${suffix}','inc2_${suffix}')">ДА</button><button class="toggle-btn no" onclick="toggleExclusive(this,'no','inc1_${suffix}','inc2_${suffix}')">НЕТ</button></div><input type="hidden" id="inc1_${suffix}"></div><div class="prop-item"><span class="prop-label">Инцидент ИБ</span><div class="toggle-group" data-hidden="inc2_${suffix}"><button class="toggle-btn yes" onclick="toggleExclusive(this,'yes','inc2_${suffix}','inc1_${suffix}')">ДА</button><button class="toggle-btn no" onclick="toggleExclusive(this,'no','inc2_${suffix}','inc1_${suffix}')">НЕТ</button></div><input type="hidden" id="inc2_${suffix}"></div></div></div>
     <div class="submit-section">
       ${suffix===2?'<button class="submit-btn" id="back_2" style="margin-right:10px;background:transparent;border:1px solid var(--border);color:var(--text)">← Назад</button>':''}
-      <button class="submit-btn" id="btn_${suffix}">${suffix===1?'Далее →': isDemo ? 'Завершить демо' : 'Передать ответы ассистенту преподавателя'}</button>
+      <button class="submit-btn" id="btn_${suffix}">${suffix===1?'Далее →': isDemo ? 'Проверить ответы в демо' : 'Передать ответы ассистенту преподавателя'}</button>
     </div>
   `;
 }
@@ -492,11 +492,9 @@ async function renderAssistantResult(personData1, personData2, result1, result2)
     incident1 = data.incident1;
     incident2 = data.incident2;
 
-    if (!isDemo) {
-      const answerResponse = await fetch(`/api/team-answer-key/${teamId}`);
-      if (answerResponse.ok) {
-        answerKey = await answerResponse.json();
-      }
+    const answerResponse = await fetch(`/api/team-answer-key/${teamId}`);
+    if (answerResponse.ok) {
+      answerKey = await answerResponse.json();
     }
 
     if (isDemo) {
@@ -564,13 +562,6 @@ async function renderAssistantResult(personData1, personData2, result1, result2)
       document.getElementById('pageError').textContent = '';
       answers1 = a1;
 
-      if (isDemo) {
-        localStorage.removeItem(QUIZ_STORAGE_KEY);
-        alert('Демо завершено! Теперь вы знаете как заполнять форму.');
-        window.location.href = '/';
-        return;
-      }
-
       if (!answerKey) {
         document.getElementById('pageError').textContent = 'Не удалось загрузить критерии проверки. Обратитесь к преподавателю.';
         return;
@@ -583,17 +574,19 @@ async function renderAssistantResult(personData1, personData2, result1, result2)
       isEvaluating = true;
       scrollToAssistantResult();
 
-      const send = await fetch('/api/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId, personData1, personData2, answers1, answers2: a2 })
-      });
-      if (!send.ok) {
-        document.getElementById('pageError').textContent = 'Не удалось отправить результаты.';
-        btn.textContent = previousText;
-        btn.disabled = false;
-        isEvaluating = false;
-        return;
+      if (!isDemo) {
+        const send = await fetch('/api/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teamId, personData1, personData2, answers1, answers2: a2 })
+        });
+        if (!send.ok) {
+          document.getElementById('pageError').textContent = 'Не удалось отправить результаты.';
+          btn.textContent = previousText;
+          btn.disabled = false;
+          isEvaluating = false;
+          return;
+        }
       }
 
       const result1 = evaluateParticipant(a1, answerKey.answers1);
