@@ -136,7 +136,16 @@ app.post('/api/verify-pin', async (req, res) => {
 
 app.post('/api/submit', async (req, res) => {
   try {
-    const { teamId, personData, personData1, personData2, answers1, answers2 } = req.body || {};
+    const {
+      teamId,
+      personData,
+      personData1,
+      personData2,
+      incidentText1,
+      incidentText2,
+      answers1,
+      answers2
+    } = req.body || {};
     const normalizedPersonData1 = personData1 || personData;
     const normalizedPersonData2 = personData2 || personData;
     if (!teamId || !normalizedPersonData1 || !normalizedPersonData2 || !answers1 || !answers2) {
@@ -149,6 +158,8 @@ app.post('/api/submit', async (req, res) => {
       teamId: Number(teamId),
       personData1: normalizedPersonData1,
       personData2: normalizedPersonData2,
+      incidentText1: String(incidentText1 || '').trim(),
+      incidentText2: String(incidentText2 || '').trim(),
       answers1,
       answers2
     });
