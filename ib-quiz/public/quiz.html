@@ -398,10 +398,42 @@ function typeWriter(elementId, text, speed = 20) {
   });
 }
 
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function scrollToAssistantResult() {
+  const block = document.getElementById('assistantResult');
+  if (!block) return;
+  block.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderColumnWithRandomTiming(config) {
+  const {
+    textId,
+    text,
+    speed,
+    initialDelay,
+    criteriaId,
+    checks,
+    reward
+  } = config;
+
+  return new Promise((resolve) => {
+    setTimeout(async () => {
+      await typeWriter(textId, text, speed);
+      renderCriteria(criteriaId, checks);
+      document.getElementById(textId).insertAdjacentHTML('beforeend', `<br><span class="assistant-coins ${reward.variant}">${reward.label}</span>`);
+      resolve();
+    }, initialDelay);
+  });
+}
+
 async function renderAssistantResult(personData1, personData2, result1, result2) {
   const block = document.getElementById('assistantResult');
   const status = document.getElementById('assistantStatus');
   block.classList.remove('hidden');
+  scrollToAssistantResult();
   status.textContent = 'Ассистент проверяет ответы';
   status.classList.add('thinking-dots');
 
@@ -423,15 +455,31 @@ async function renderAssistantResult(personData1, personData2, result1, result2)
   const text1 = `Привет, ${personData1.firstName}! Ты правильно отметил(а) ${result1.correct} из ${result1.total} критериев (${result1.percent}%). Твоя награда: ${reward1.label}.`;
   const text2 = `Привет, ${personData2.firstName}! Ты правильно отметил(а) ${result2.correct} из ${result2.total} критериев (${result2.percent}%). Твоя награда: ${reward2.label}.`;
 
-  await Promise.all([
-    typeWriter('assistantText1', text1),
-    typeWriter('assistantText2', text2)
-  ]);
+  const speed1 = randomInt(16, 27);
+  const speed2 = randomInt(16, 27);
+  const delay1 = randomInt(100, 1200);
+  const delay2 = randomInt(100, 1200);
 
-  renderCriteria('assistantCriteria1', result1.checks);
-  renderCriteria('assistantCriteria2', result2.checks);
-  document.getElementById('assistantText1').insertAdjacentHTML('beforeend', `<br><span class="assistant-coins ${reward1.variant}">${reward1.label}</span>`);
-  document.getElementById('assistantText2').insertAdjacentHTML('beforeend', `<br><span class="assistant-coins ${reward2.variant}">${reward2.label}</span>`);
+  await Promise.all([
+    renderColumnWithRandomTiming({
+      textId: 'assistantText1',
+      text: text1,
+      speed: speed1,
+      initialDelay: delay1,
+      criteriaId: 'assistantCriteria1',
+      checks: result1.checks,
+      reward: reward1
+    }),
+    renderColumnWithRandomTiming({
+      textId: 'assistantText2',
+      text: text2,
+      speed: speed2,
+      initialDelay: delay2,
+      criteriaId: 'assistantCriteria2',
+      checks: result2.checks,
+      reward: reward2
+    })
+  ]);
 }
 
 (async function init(){
@@ -531,6 +579,7 @@ async function renderAssistantResult(personData1, personData2, result1, result2)
       btn.textContent = 'Проверяем ответы...';
       btn.disabled = true;
       isEvaluating = true;
+      scrollToAssistantResult();
 
       const send = await fetch('/api/submit', {
         method: 'POST',
