@@ -96,14 +96,19 @@ function adminAuth(req, res, next) {
 
 app.get('/api/scenarios/:teamId', async (req, res) => {
   try {
-    const teamId = Number(req.params.teamId);
-    if (!Number.isInteger(teamId) || teamId < 1) {
-      return res.status(400).json({ error: 'Некорректный teamId' });
+    const raw = req.params.teamId;
+    const prefix = raw === 'demo' ? 'demo' : `team${Number(raw)}`;
+
+    if (raw !== 'demo') {
+      const teamId = Number(raw);
+      if (!Number.isInteger(teamId) || teamId < 1) {
+        return res.status(400).json({ error: 'Некорректный teamId' });
+      }
     }
 
     const [incident1, incident2] = await Promise.all([
-      fs.readFile(path.join(SCENARIOS_DIR, `team${teamId}-1.txt`), 'utf-8'),
-      fs.readFile(path.join(SCENARIOS_DIR, `team${teamId}-2.txt`), 'utf-8')
+      fs.readFile(path.join(SCENARIOS_DIR, `${prefix}-1.txt`), 'utf-8'),
+      fs.readFile(path.join(SCENARIOS_DIR, `${prefix}-2.txt`), 'utf-8')
     ]);
 
     return res.json({

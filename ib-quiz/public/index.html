@@ -44,6 +44,11 @@
       <button class="action-btn" id="loginBtn">Войти</button>
     </section>
     <div class="error" id="errorBox"></div>
+
+    <div style="border-top:1px solid var(--border);margin-top:24px;padding-top:20px;text-align:center">
+      <p class="sub" style="margin-bottom:12px">Не знаете как заполнять форму?</p>
+      <button class="action-btn" id="demoBtn" style="width:100%">Демо — посмотреть пример</button>
+    </div>
   </main>
 
   <script>
@@ -91,6 +96,11 @@
     loginBtn.addEventListener('click', verifyPin);
     pinInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') verifyPin();
+    });
+
+    document.getElementById('demoBtn').addEventListener('click', () => {
+      localStorage.setItem('teamId', 'demo');
+      window.location.href = '/quiz';
     });
   </script>
 </body>

@@ -46,8 +46,8 @@
       <a class="link" href="#" id="logout">Выйти</a>
     </div>
     <div class="header">
-      <div class="task-badge">Отчёт команды</div>
-      <h1>ОТЧЁТ О СОБЫТИИ ИНФОРМАЦИОННОЙ БЕЗОПАСНОСТИ</h1>
+      <div class="task-badge" id="taskBadge">Отчёт команды</div>
+      <h1 id="mainTitle">ОТЧЁТ О СОБЫТИИ ИНФОРМАЦИОННОЙ БЕЗОПАСНОСТИ</h1>
     </div>
     <div id="pageError" class="error-line"></div>
     <div class="pages">
@@ -74,7 +74,9 @@ const sections = {
   threat:['Мошенничество','Взлом данных','Кража данных','Вирусная атака','Человеческий фактор']
 };
 
-const teamId = Number(localStorage.getItem('teamId'));
+const rawTeamId = localStorage.getItem('teamId');
+const isDemo = rawTeamId === 'demo';
+const teamId = isDemo ? 'demo' : Number(rawTeamId);
 if (!teamId) window.location.href = '/';
 const QUIZ_STORAGE_KEY = `quizDraft_team_${teamId}`;
 
@@ -106,6 +108,7 @@ function showStep(step, pushHistory = false) {
 }
 
 function reportProgress() {
+  if (isDemo) return;
   const allFields = document.querySelectorAll('input[id]');
   let filled = 0;
   let total = 0;
@@ -234,7 +237,7 @@ function renderPage(containerId, incidentNum, text, suffix) {
     <div class="card"><div class="card-header">О каком происшествии идёт речь</div><div class="props-row"><div class="prop-item"><span class="prop-label">Событие ИБ</span><div class="toggle-group" data-hidden="inc1_${suffix}"><button class="toggle-btn yes" onclick="toggleExclusive(this,'yes','inc1_${suffix}','inc2_${suffix}')">ДА</button><button class="toggle-btn no" onclick="toggleExclusive(this,'no','inc1_${suffix}','inc2_${suffix}')">НЕТ</button></div><input type="hidden" id="inc1_${suffix}"></div><div class="prop-item"><span class="prop-label">Инцидент ИБ</span><div class="toggle-group" data-hidden="inc2_${suffix}"><button class="toggle-btn yes" onclick="toggleExclusive(this,'yes','inc2_${suffix}','inc1_${suffix}')">ДА</button><button class="toggle-btn no" onclick="toggleExclusive(this,'no','inc2_${suffix}','inc1_${suffix}')">НЕТ</button></div><input type="hidden" id="inc2_${suffix}"></div></div></div>
     <div class="submit-section">
       ${suffix===2?'<button class="submit-btn" id="back_2" style="margin-right:10px;background:transparent;border:1px solid var(--border);color:var(--text)">← Назад</button>':''}
-      <button class="submit-btn" id="btn_${suffix}">${suffix===1?'Далее →':'Отправить и получить промпт'}</button>
+      <button class="submit-btn" id="btn_${suffix}">${suffix===1?'Далее →': isDemo ? 'Завершить демо' : 'Отправить и получить промпт'}</button>
     </div>
   `;
 }
@@ -303,6 +306,11 @@ return `Промпт закодирован в base64\n${encodedPrompt}`;
     incident1 = data.incident1;
     incident2 = data.incident2;
 
+    if (isDemo) {
+      document.getElementById('taskBadge').textContent = 'Демо';
+      document.getElementById('mainTitle').textContent = 'ДЕМО — ПРИМЕР ЗАПОЛНЕНИЯ ФОРМЫ';
+    }
+
     renderPage('page1', 1, incident1, 1);
     renderPage('page2', 2, incident2, 2);
     document.querySelectorAll('.manual-field input').forEach((input) => {
@@ -361,6 +369,13 @@ return `Промпт закодирован в base64\n${encodedPrompt}`;
       }
       document.getElementById('pageError').textContent = '';
       answers1 = a1;
+
+      if (isDemo) {
+        localStorage.removeItem(QUIZ_STORAGE_KEY);
+        alert('Демо завершено! Теперь вы знаете как заполнять форму.');
+        window.location.href = '/';
+        return;
+      }
 
       const send = await fetch('/api/submit', {
         method: 'POST',
