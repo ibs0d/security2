@@ -179,34 +179,27 @@ function createToggleItem(text, key, exclusive) {
   return `<li class="check-item"><span class="check-text">${text}</span><div class="toggle-group" data-hidden="${key}"><button class="toggle-btn yes" onclick="${fn}">ДА</button><button class="toggle-btn no" onclick="${fnNo}">НЕТ</button></div><input type="hidden" id="${key}"></li>`;
 }
 
+function getTodayFormatted() {
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}`;
+}
+
 function createPersonFields(suffix) {
+  const todayFormatted = getTodayFormatted();
   return `
     <div class="card">
       <div class="card-header">Данные для отчёта по инциденту №${suffix}</div>
       <div class="manual-fields">
         <div class="manual-field">
-          <label for="lastName_${suffix}">Фамилия</label>
-          <input id="lastName_${suffix}" type="text" required autocomplete="family-name">
-        </div>
-        <div class="manual-field">
           <label for="firstName_${suffix}">Имя</label>
           <input id="firstName_${suffix}" type="text" required autocomplete="given-name">
         </div>
         <div class="manual-field">
-          <label for="middleName_${suffix}">Отчество</label>
-          <input id="middleName_${suffix}" type="text" required autocomplete="additional-name">
-        </div>
-        <div class="manual-field">
-          <label for="position_${suffix}">Должность</label>
-          <input id="position_${suffix}" type="text" required>
-        </div>
-        <div class="manual-field">
-          <label for="department_${suffix}">Отдел</label>
-          <input id="department_${suffix}" type="text" required>
-        </div>
-        <div class="manual-field">
           <label for="reportDate_${suffix}">Дата отчёта (ДД.ММ.ГГГГ)</label>
-          <input id="reportDate_${suffix}" type="text" required inputmode="numeric" placeholder="01.01.2026">
+          <input id="reportDate_${suffix}" type="text" required inputmode="numeric" value="${todayFormatted}">
         </div>
       </div>
     </div>
@@ -246,11 +239,7 @@ function isValid(a) {
 function asYesNo(v){ return v === 'ДА' ? 'ДА' : 'НЕТ'; }
 function collectPersonData(suffix) {
   return {
-    lastName: document.getElementById(`lastName_${suffix}`).value.trim(),
     firstName: document.getElementById(`firstName_${suffix}`).value.trim(),
-    middleName: document.getElementById(`middleName_${suffix}`).value.trim(),
-    position: document.getElementById(`position_${suffix}`).value.trim(),
-    department: document.getElementById(`department_${suffix}`).value.trim(),
     reportDate: document.getElementById(`reportDate_${suffix}`).value.trim()
   };
 }

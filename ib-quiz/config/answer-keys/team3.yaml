@@ -1,18 +1,10 @@
 personData1:
-  lastName: "Кузнецова"
   firstName: "Оксана"
-  middleName: "Николаевна"
-  position: "Секретарь канцелярии"
-  department: "Канцелярия"
-  reportDate: "06.04.2026"
+  reportDate: "сегодня"
 
 personData2:
-  lastName: "Морева"
   firstName: "Зинаида"
-  middleName: "Олеговна"
-  position: "Главный бухгалтер"
-  department: "Бухгалтерия"
-  reportDate: "06.04.2026"
+  reportDate: "сегодня"
 
 answers1:
   what:

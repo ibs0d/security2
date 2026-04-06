@@ -83,11 +83,7 @@ function pickFirstValue(source, aliases) {
 function normalizePersonData(personData) {
   const src = personData || {};
   return {
-    lastName: pickFirstValue(src, ['lastName', 'lastname', 'last_name', 'surname', 'familyName', 'Фамилия']),
     firstName: pickFirstValue(src, ['firstName', 'firstname', 'first_name', 'name', 'givenName', 'Имя']),
-    middleName: pickFirstValue(src, ['middleName', 'middlename', 'middle_name', 'patronymic', 'secondName', 'Отчество']),
-    position: pickFirstValue(src, ['position', 'jobTitle', 'title', 'role', 'Должность']),
-    department: pickFirstValue(src, ['department', 'dept', 'division', 'unit', 'Отдел']),
     reportDate: pickFirstValue(src, ['reportDate', 'report_date', 'date', 'reportingDate', 'Дата отчёта', 'Дата отчета'])
   };
 }
@@ -168,11 +164,7 @@ function personInfo(personData, incidentNum, correctPersonData) {
   const item = (label, key, value) => `<div><span class="muted">${label}:</span> <span class="${getPersonFieldBadgeClass(key, value, normalizedCorrect[key])}">${value || '—'}</span></div>`;
   return [
     `<div style="margin-bottom:6px"><strong>Инцидент ${incidentNum}</strong></div>`,
-    item('Фамилия', 'lastName', normalized.lastName),
     item('Имя', 'firstName', normalized.firstName),
-    item('Отчество', 'middleName', normalized.middleName),
-    item('Должность', 'position', normalized.position),
-    item('Отдел', 'department', normalized.department),
     item('Дата отчёта', 'reportDate', normalized.reportDate)
   ].join('');
 }
