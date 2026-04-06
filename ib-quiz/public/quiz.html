@@ -327,7 +327,7 @@ function compareSection(sectionAnswers, sectionKey, labels) {
     const answer = sectionAnswers[key];
     const correct = isCorrect(answer, expected);
     const label = labels[Number(key) - 1] || `Критерий ${key}`;
-    return { label, correct };
+    return { label, correct, participantAnswer: asYesNo(answer) };
   }).filter((item) => item.correct !== null);
 }
 
@@ -349,7 +349,8 @@ function evaluateParticipant(answers, correctAnswers) {
   if (correctAnswers?.incidentType) {
     checks.push({
       label: 'Тип происшествия',
-      correct: isCorrect(answers?.incidentType, correctAnswers.incidentType)
+      correct: isCorrect(answers?.incidentType, correctAnswers.incidentType),
+      participantAnswer: answers?.incidentType || '—'
     });
   }
 
@@ -378,7 +379,8 @@ function renderCriteria(targetId, checks) {
   target.innerHTML = checks.map((item) => {
     const cls = item.correct ? 'yes' : 'no';
     const mark = item.correct ? '✓' : '✗';
-    return `<div class="criteria-line ${cls}">${mark} ${item.label}</div>`;
+    const participantAnswer = item.participantAnswer ? ` (${item.participantAnswer})` : '';
+    return `<div class="criteria-line ${cls}">${mark} ${item.label}${participantAnswer}</div>`;
   }).join('');
 }
 
