@@ -181,6 +181,23 @@ app.get('/api/answer-keys/:teamId', adminAuth, async (req, res) => {
   }
 });
 
+app.get('/api/team-answer-key/:teamId', async (req, res) => {
+  try {
+    const teamId = Number(req.params.teamId);
+    if (!Number.isInteger(teamId) || teamId < 1) {
+      return res.status(400).json({ error: 'Некорректный teamId' });
+    }
+
+    const answerKey = await readTeamAnswerKey(teamId);
+    return res.json({
+      answers1: answerKey.answers1 || {},
+      answers2: answerKey.answers2 || {}
+    });
+  } catch (error) {
+    return res.status(404).json({ error: 'Файл ответов не найден' });
+  }
+});
+
 app.delete('/api/submissions', adminAuth, async (_req, res) => {
   try {
     await writeJson(SUBMISSIONS_FILE, []);
