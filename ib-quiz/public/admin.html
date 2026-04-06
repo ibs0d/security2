@@ -92,11 +92,23 @@ function renderSection(title, obj, correctObj, labelList) {
   return `<div style="margin-bottom:8px"><div class="muted" style="margin-bottom:4px">${title}</div><div class="badges">${items}</div></div>`;
 }
 
-function brief(answers, correctAnswers) {
+function personInfo(personData) {
+  if (!personData) return '';
+  const name = personData.firstName || personData.name || '';
+  const date = personData.reportDate || personData.date || '';
+  if (!name && !date) return '';
+  const parts = [];
+  if (name) parts.push(`<span class="muted">Имя:</span> ${name}`);
+  if (date) parts.push(`<span class="muted">Дата:</span> ${date}`);
+  return `<div style="margin-bottom:10px;font-size:12px">${parts.join(' &nbsp; ')}</div>`;
+}
+
+function brief(answers, correctAnswers, personData) {
   if (!answers) return '<span class="muted">Нет данных</span>';
   const typeCorrect = isCorrect(answers.incidentType, correctAnswers?.incidentType);
   const typeCls = typeCorrect === null ? 'badge' : typeCorrect ? 'badge yes' : 'badge no';
   return [
+    personInfo(personData),
     renderSection('Что произошло', answers.what, correctAnswers?.what, labels.what),
     renderSection('Почему произошло', answers.why, correctAnswers?.why, labels.why),
     renderSection('Свойства', answers.properties, correctAnswers?.properties, labels.properties),
@@ -139,8 +151,8 @@ async function loadSubmissions() {
     <tr>
       <td>${new Date(item.timestamp).toLocaleString('ru-RU')}</td>
       <td>Команда ${item.teamId}</td>
-      <td>${brief(item.answers1, correctAnswers.answers1)}</td>
-      <td>${brief(item.answers2, correctAnswers.answers2)}</td>
+      <td>${brief(item.answers1, correctAnswers.answers1, item.personData1 || item.personData)}</td>
+      <td>${brief(item.answers2, correctAnswers.answers2, item.personData2 || item.personData)}</td>
     </tr>
   `;
   }).join('');
