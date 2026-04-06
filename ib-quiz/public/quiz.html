@@ -375,8 +375,8 @@ return `Промпт закодирован в base64\n${encodedPrompt}`;
       const confirmed = window.confirm('Скопировать закодированный промпт и перейти к ассистенту преподавателя?');
       if (!confirmed) return;
 
-      await navigator.clipboard.writeText(document.getElementById('promptText').value);
       window.open('https://chat.qwen.ai/', '_blank', 'noopener,noreferrer');
+      await navigator.clipboard.writeText(document.getElementById('promptText').value);
       const btn = document.getElementById('copyBtn');
       btn.textContent = '✓ Скопировано!';
       setTimeout(() => btn.textContent = 'Скопировать и перейти к ассистенту преподавателя', 1500);
