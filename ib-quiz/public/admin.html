@@ -45,6 +45,7 @@
       <h1>Админ-панель отправок</h1>
       <div style="display:flex;gap:8px">
         <button class="btn" id="refreshBtn">Обновить</button>
+        <button class="btn danger" id="clearDashboardBtn">Очистить Dashboard</button>
         <button class="btn danger" id="clearBtn">Очистить всё</button>
       </div>
     </div>
@@ -236,6 +237,15 @@ document.getElementById('clearBtn').addEventListener('click', async () => {
     return;
   }
   loadSubmissions();
+});
+
+document.getElementById('clearDashboardBtn').addEventListener('click', async () => {
+  if (!confirm('Очистить прогресс Dashboard для всех команд?')) return;
+  const response = await fetch('/api/progress', {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${adminPassword}` }
+  });
+  msg.textContent = response.ok ? 'Dashboard очищен.' : 'Ошибка очистки Dashboard.';
 });
 
 authForm.addEventListener('submit', async (event) => {

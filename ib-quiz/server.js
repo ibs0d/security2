@@ -251,6 +251,19 @@ app.post('/api/progress', (req, res) => {
   return res.json({ ok: true });
 });
 
+app.delete('/api/progress', adminAuth, (_req, res) => {
+  for (const key of Object.keys(teamProgress)) {
+    delete teamProgress[key];
+  }
+
+  const payload = `data: ${JSON.stringify(teamProgress)}\n\n`;
+  for (const client of sseClients) {
+    client.write(payload);
+  }
+
+  return res.json({ ok: true });
+});
+
 app.get('/api/progress', (_req, res) => {
   return res.json(teamProgress);
 });
