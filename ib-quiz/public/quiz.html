@@ -40,9 +40,6 @@
     .assistant-card{border:1px solid var(--border);border-radius:8px;background:var(--surface2);padding:12px}
     .assistant-name{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:8px}
     .assistant-typing{font-size:13px;line-height:1.45;min-height:62px;white-space:pre-wrap}
-    .assistant-coins{display:inline-block;margin-top:8px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);font-size:11px;font-family:'IBM Plex Mono',monospace}
-    .assistant-coins.super{border-color:rgba(37,99,235,.4);background:rgba(37,99,235,.08);color:var(--accent)}
-    .assistant-coins.regular{border-color:rgba(22,163,74,.35);background:rgba(22,163,74,.08);color:var(--green)}
     .criteria-list{margin-top:10px;display:flex;flex-direction:column;gap:6px}
     .criteria-line{font-size:12px;line-height:1.3}
     .criteria-line.yes{color:var(--green)}
@@ -370,19 +367,6 @@ function evaluateParticipant(answers, correctAnswers) {
   return { checks, total, correct, percent };
 }
 
-function getCoinReward(percent) {
-  if (percent <= 30) {
-    return { label: '1 коин', variant: 'regular' };
-  }
-  if (percent <= 60) {
-    return { label: '2 коина', variant: 'regular' };
-  }
-  if (percent <= 85) {
-    return { label: '3 коина', variant: 'regular' };
-  }
-  return { label: 'Супер коин', variant: 'super' };
-}
-
 function renderCriteria(targetId, checks) {
   const target = document.getElementById(targetId);
   target.innerHTML = checks.map((item) => {
@@ -426,15 +410,13 @@ function renderColumnWithRandomTiming(config) {
     speed,
     initialDelay,
     criteriaId,
-    checks,
-    reward
+    checks
   } = config;
 
   return new Promise((resolve) => {
     setTimeout(async () => {
       await typeWriter(textId, text, speed);
       renderCriteria(criteriaId, checks);
-      document.getElementById(textId).insertAdjacentHTML('beforeend', `<br><span class="assistant-coins ${reward.variant}">${reward.label}</span>`);
       resolve();
     }, initialDelay);
   });
@@ -461,10 +443,8 @@ async function renderAssistantResult(personData1, personData2, result1, result2)
   status.classList.remove('thinking-dots');
   status.textContent = 'Проверка завершена ✅';
 
-  const reward1 = getCoinReward(result1.percent);
-  const reward2 = getCoinReward(result2.percent);
-  const text1 = `Привет, ${personData1.firstName}! Ты правильно отметил(а) ${result1.correct} из ${result1.total} критериев (${result1.percent}%). Твоя награда: ${reward1.label}.`;
-  const text2 = `Привет, ${personData2.firstName}! Ты правильно отметил(а) ${result2.correct} из ${result2.total} критериев (${result2.percent}%). Твоя награда: ${reward2.label}.`;
+  const text1 = `Привет, ${personData1.firstName}! Ты правильно отметил(а) ${result1.correct} из ${result1.total} критериев (${result1.percent}%).`;
+  const text2 = `Привет, ${personData2.firstName}! Ты правильно отметил(а) ${result2.correct} из ${result2.total} критериев (${result2.percent}%).`;
 
   const speed1 = randomInt(16, 27);
   const speed2 = randomInt(16, 27);
@@ -478,8 +458,7 @@ async function renderAssistantResult(personData1, personData2, result1, result2)
       speed: speed1,
       initialDelay: delay1,
       criteriaId: 'assistantCriteria1',
-      checks: result1.checks,
-      reward: reward1
+      checks: result1.checks
     }),
     renderColumnWithRandomTiming({
       textId: 'assistantText2',
@@ -487,8 +466,7 @@ async function renderAssistantResult(personData1, personData2, result1, result2)
       speed: speed2,
       initialDelay: delay2,
       criteriaId: 'assistantCriteria2',
-      checks: result2.checks,
-      reward: reward2
+      checks: result2.checks
     })
   ]);
 }
