@@ -6,7 +6,7 @@ personData2:
   firstName: "Зинаида"
   reportDate: "сегодня"
 
-nswers1:
+answers1:
   what:
     "1": "НЕТ"
     "2": "НЕТ"
