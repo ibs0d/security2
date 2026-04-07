@@ -162,6 +162,10 @@ function brief(answers, correctAnswers, personData, incidentText) {
   ].join('');
 }
 
+function getFormTypeLabel(formType) {
+  return formType === 'additional' ? '<div class="muted">Дополнительная форма</div>' : '<div class="muted">Основная форма</div>';
+}
+
 async function loadSubmissions() {
   msg.textContent = '';
   const response = await fetch('/api/submissions', {
@@ -175,21 +179,25 @@ async function loadSubmissions() {
   }
 
   const submissions = await response.json();
-  const answerKeysByTeamId = {};
-  const scenariosByTeamId = {};
-  const teamIds = [...new Set(submissions.map((item) => Number(item.teamId)).filter(Boolean))];
-  await Promise.all(teamIds.map(async (teamId) => {
+  const answerKeysByKey = {};
+  const scenariosByKey = {};
+  const requestPairs = [...new Set(submissions.map((item) => `${Number(item.teamId)}:${item.formType === 'additional' ? '1' : '0'}`))];
+  await Promise.all(requestPairs.map(async (pair) => {
+    const [rawTeamId, rawAdditional] = pair.split(':');
+    const teamId = Number(rawTeamId);
+    const additional = rawAdditional === '1';
+    const query = additional ? '?additional=1' : '';
     const [answerResponse, scenarioResponse] = await Promise.all([
-      fetch(`/api/answer-keys/${teamId}`, {
+      fetch(`/api/answer-keys/${teamId}${query}`, {
         headers: { Authorization: `Bearer ${adminPassword}` }
       }),
-      fetch(`/api/scenarios/${teamId}`)
+      fetch(`/api/scenarios/${teamId}${query}`)
     ]);
     if (answerResponse.ok) {
-      answerKeysByTeamId[teamId] = await answerResponse.json();
+      answerKeysByKey[pair] = await answerResponse.json();
     }
     if (scenarioResponse.ok) {
-      scenariosByTeamId[teamId] = await scenarioResponse.json();
+      scenariosByKey[pair] = await scenarioResponse.json();
     }
   }));
 
@@ -199,14 +207,16 @@ async function loadSubmissions() {
   }
 
   rows.innerHTML = submissions.map((item) => {
-    const correctAnswers = answerKeysByTeamId[item.teamId] || {};
-    const scenario = scenariosByTeamId[item.teamId] || {};
+    const additional = item.formType === 'additional';
+    const key = `${Number(item.teamId)}:${additional ? '1' : '0'}`;
+    const correctAnswers = answerKeysByKey[key] || {};
+    const scenario = scenariosByKey[key] || {};
     const incidentText1 = item.incidentText1 || scenario.incident1 || '';
     const incidentText2 = item.incidentText2 || scenario.incident2 || '';
     return `
     <tr>
       <td>${new Date(item.timestamp).toLocaleString('ru-RU')}</td>
-      <td>Команда ${item.teamId}</td>
+      <td>Команда ${item.teamId}${getFormTypeLabel(item.formType)}</td>
       <td>${brief(item.answers1, correctAnswers.answers1, item.personData1 || item.personData, incidentText1)}</td>
       <td>${brief(item.answers2, correctAnswers.answers2, item.personData2 || item.personData, incidentText2)}</td>
     </tr>

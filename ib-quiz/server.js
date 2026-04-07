@@ -74,12 +74,21 @@ function parseSimpleYaml(yamlText) {
   return root;
 }
 
-async function readTeamAnswerKey(teamId) {
+async function readTeamAnswerKey(teamId, additional = false) {
   const isDemo = String(teamId) === 'demo';
-  const fileName = isDemo ? 'demo.yaml' : `team${teamId}.yaml`;
+  const fileName = isDemo
+    ? (additional ? 'demod.yaml' : 'demo.yaml')
+    : `team${teamId}${additional ? 'd' : ''}.yaml`;
   const yamlPath = path.join(ANSWER_KEYS_DIR, fileName);
   const yamlRaw = await fs.readFile(yamlPath, 'utf-8');
   return parseSimpleYaml(yamlRaw);
+}
+
+function getScenarioPrefix(rawTeamId, additional = false) {
+  if (rawTeamId === 'demo') {
+    return additional ? 'demod' : 'demo';
+  }
+  return `team${Number(rawTeamId)}${additional ? 'd' : ''}`;
 }
 
 function getAdminToken(req) {
@@ -99,7 +108,8 @@ function adminAuth(req, res, next) {
 app.get('/api/scenarios/:teamId', async (req, res) => {
   try {
     const raw = req.params.teamId;
-    const prefix = raw === 'demo' ? 'demo' : `team${Number(raw)}`;
+    const additional = String(req.query.additional || '') === '1';
+    const prefix = getScenarioPrefix(raw, additional);
 
     if (raw !== 'demo') {
       const teamId = Number(raw);
@@ -138,6 +148,7 @@ app.post('/api/submit', async (req, res) => {
   try {
     const {
       teamId,
+      formType,
       personData,
       personData1,
       personData2,
@@ -156,6 +167,7 @@ app.post('/api/submit', async (req, res) => {
     all.push({
       timestamp: new Date().toISOString(),
       teamId: Number(teamId),
+      formType: formType === 'additional' ? 'additional' : 'main',
       personData1: normalizedPersonData1,
       personData2: normalizedPersonData2,
       incidentText1: String(incidentText1 || '').trim(),
@@ -183,11 +195,12 @@ app.get('/api/submissions', adminAuth, async (_req, res) => {
 app.get('/api/answer-keys/:teamId', adminAuth, async (req, res) => {
   try {
     const teamId = Number(req.params.teamId);
+    const additional = String(req.query.additional || '') === '1';
     if (!Number.isInteger(teamId) || teamId < 1) {
       return res.status(400).json({ error: 'Некорректный teamId' });
     }
 
-    const answerKey = await readTeamAnswerKey(teamId);
+    const answerKey = await readTeamAnswerKey(teamId, additional);
     return res.json(answerKey);
   } catch (error) {
     return res.status(404).json({ error: 'Файл ответов не найден' });
@@ -197,12 +210,13 @@ app.get('/api/answer-keys/:teamId', adminAuth, async (req, res) => {
 app.get('/api/team-answer-key/:teamId', async (req, res) => {
   try {
     const rawTeamId = req.params.teamId;
+    const additional = String(req.query.additional || '') === '1';
     const teamId = rawTeamId === 'demo' ? 'demo' : Number(rawTeamId);
     if (teamId !== 'demo' && (!Number.isInteger(teamId) || teamId < 1)) {
       return res.status(400).json({ error: 'Некорректный teamId' });
     }
 
-    const answerKey = await readTeamAnswerKey(teamId);
+    const answerKey = await readTeamAnswerKey(teamId, additional);
     return res.json({
       answers1: answerKey.answers1 || {},
       answers2: answerKey.answers2 || {}
