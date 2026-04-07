@@ -85,6 +85,11 @@
       </div>
     </div>
   </div>
+  <div class="wrapper">
+    <div class="submit-section">
+      <button class="submit-btn hidden" id="openAdditionalFormBtn">Открыть дополнительную форму</button>
+    </div>
+  </div>
 
 <script>
 const sections = {
@@ -100,12 +105,15 @@ const rawTeamId = localStorage.getItem('teamId');
 const isDemo = rawTeamId === 'demo';
 const teamId = isDemo ? 'demo' : Number(rawTeamId);
 if (!teamId) window.location.href = '/';
-const QUIZ_STORAGE_KEY = `quizDraft_team_${teamId}`;
+const MAIN_STORAGE_KEY = `quizDraft_team_${teamId}`;
+const ADDITIONAL_STORAGE_KEY = `quizDraft_team_${teamId}_additional`;
 
 let incident1 = ''; let incident2 = '';
 let answers1 = null;
 let answerKey = null;
 let isEvaluating = false;
+let isAdditionalMode = false;
+let quizStorageKey = MAIN_STORAGE_KEY;
 
 function getCurrentStep() {
   return document.getElementById('page2').classList.contains('hidden') ? 1 : 2;
@@ -132,7 +140,7 @@ function showStep(step, pushHistory = false) {
 }
 
 function reportProgress() {
-  if (isDemo) return;
+  if (isDemo || isAdditionalMode) return;
   const allFields = document.querySelectorAll('input[id]');
   let filled = 0;
   let total = 0;
@@ -151,12 +159,12 @@ function saveDraft() {
   const savedInputs = Array.from(document.querySelectorAll('input[id]'));
   const values = Object.fromEntries(savedInputs.map((input) => [input.id, input.value || '']));
   const payload = { step: getCurrentStep(), values };
-  localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(payload));
+  localStorage.setItem(quizStorageKey, JSON.stringify(payload));
   reportProgress();
 }
 
 function restoreDraft() {
-  const raw = localStorage.getItem(QUIZ_STORAGE_KEY);
+  const raw = localStorage.getItem(quizStorageKey);
   if (!raw) return 1;
 
   try {
@@ -181,7 +189,7 @@ function restoreDraft() {
 
     return parsed.step === 2 ? 2 : 1;
   } catch (e) {
-    localStorage.removeItem(QUIZ_STORAGE_KEY);
+    localStorage.removeItem(quizStorageKey);
     return 1;
   }
 }
@@ -189,7 +197,8 @@ function restoreDraft() {
 document.getElementById('logout').addEventListener('click', (e) => {
   e.preventDefault();
   localStorage.removeItem('teamId');
-  localStorage.removeItem(QUIZ_STORAGE_KEY);
+  localStorage.removeItem(MAIN_STORAGE_KEY);
+  localStorage.removeItem(ADDITIONAL_STORAGE_KEY);
   window.location.href = '/';
 });
 
@@ -484,58 +493,132 @@ async function renderAssistantResult(personData1, personData2, result1, result2)
   ]);
 }
 
-(async function init(){
-  try {
-    const response = await fetch(`/api/scenarios/${teamId}`);
-    if (!response.ok) throw new Error('Не удалось загрузить сценарии');
-    const data = await response.json();
-    incident1 = data.incident1;
-    incident2 = data.incident2;
+async function loadForm(isAdditional) {
+  const query = isAdditional ? '?additional=1' : '';
+  const response = await fetch(`/api/scenarios/${teamId}${query}`);
+  if (!response.ok) throw new Error('Не удалось загрузить сценарии');
+  const data = await response.json();
+  incident1 = data.incident1;
+  incident2 = data.incident2;
 
-    const answerResponse = await fetch(`/api/team-answer-key/${teamId}`);
-    if (answerResponse.ok) {
-      answerKey = await answerResponse.json();
+  const answerResponse = await fetch(`/api/team-answer-key/${teamId}${query}`);
+  answerKey = answerResponse.ok ? await answerResponse.json() : null;
+
+  isAdditionalMode = isAdditional;
+  quizStorageKey = isAdditional ? ADDITIONAL_STORAGE_KEY : MAIN_STORAGE_KEY;
+  document.getElementById('taskBadge').textContent = isAdditional ? 'Дополнительная форма' : (isDemo ? 'Демо' : 'Отчёт команды');
+  renderPage('page1', 1, incident1, 1);
+  renderPage('page2', 2, incident2, 2);
+  document.querySelectorAll('.manual-field input').forEach((input) => input.addEventListener('input', saveDraft));
+  const restoredStep = restoreDraft();
+  showStep(restoredStep, false);
+  reportProgress();
+}
+
+function bindPageActions() {
+  document.getElementById('btn_1').addEventListener('click', () => {
+    const personData1 = collectPersonData(1);
+    const personValidationError = validatePersonData(personData1);
+    if (personValidationError) {
+      document.getElementById('pageError').textContent = personValidationError;
+      return;
+    }
+    const a1 = collectAnswers(1);
+    if (!isValid(a1)) {
+      document.getElementById('pageError').textContent = 'Заполните все вопросы в каждом разделе и выберите тип происшествия.';
+      return;
+    }
+    answers1 = a1;
+    document.getElementById('pageError').textContent = '';
+    showStep(2, true);
+    saveDraft();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  document.getElementById('back_2').addEventListener('click', () => {
+    document.getElementById('pageError').textContent = '';
+    showStep(1, true);
+    saveDraft();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  document.getElementById('btn_2').addEventListener('click', async () => {
+    if (isEvaluating) return;
+    const personData1 = collectPersonData(1);
+    const personData2 = collectPersonData(2);
+    const personValidationError1 = validatePersonData(personData1);
+    const personValidationError2 = validatePersonData(personData2);
+    if (personValidationError1 || personValidationError2) {
+      document.getElementById('pageError').textContent = personValidationError1 || personValidationError2;
+      return;
+    }
+    const a1 = collectAnswers(1);
+    const a2 = collectAnswers(2);
+    if (!isValid(a1) || !isValid(a2)) {
+      document.getElementById('pageError').textContent = 'Заполните все вопросы в каждом разделе и выберите тип происшествия.';
+      return;
+    }
+    document.getElementById('pageError').textContent = '';
+    answers1 = a1;
+
+    if (!answerKey) {
+      document.getElementById('pageError').textContent = 'Не удалось загрузить критерии проверки. Обратитесь к преподавателю.';
+      return;
     }
 
+    const btn = document.getElementById('btn_2');
+    const previousText = btn.textContent;
+    btn.textContent = 'Проверяем ответы...';
+    btn.disabled = true;
+    isEvaluating = true;
+    scrollToAssistantResult();
+
+    if (!isDemo) {
+      const send = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId,
+          formType: isAdditionalMode ? 'additional' : 'main',
+          personData1,
+          personData2,
+          incidentText1: incident1,
+          incidentText2: incident2,
+          answers1,
+          answers2: a2
+        })
+      });
+      if (!send.ok) {
+        document.getElementById('pageError').textContent = 'Не удалось отправить результаты.';
+        btn.textContent = previousText;
+        btn.disabled = false;
+        isEvaluating = false;
+        return;
+      }
+    }
+
+    const result1 = evaluateParticipant(a1, answerKey.answers1);
+    const result2 = evaluateParticipant(a2, answerKey.answers2);
+    await renderAssistantResult(personData1, personData2, result1, result2);
+    localStorage.removeItem(quizStorageKey);
+    if (!isAdditionalMode) {
+      document.getElementById('openAdditionalFormBtn').classList.remove('hidden');
+    }
+    btn.textContent = previousText;
+    btn.disabled = false;
+    isEvaluating = false;
+  });
+}
+
+(async function init(){
+  try {
     if (isDemo) {
       document.getElementById('taskBadge').textContent = 'Демо';
       document.getElementById('mainTitle').textContent = 'ДЕМО — ПРИМЕР ЗАПОЛНЕНИЯ ФОРМЫ';
     }
 
-    renderPage('page1', 1, incident1, 1);
-    renderPage('page2', 2, incident2, 2);
-    document.querySelectorAll('.manual-field input').forEach((input) => {
-      input.addEventListener('input', saveDraft);
-    });
-    const restoredStep = restoreDraft();
-    showStep(restoredStep, false);
-    reportProgress();
-
-    document.getElementById('btn_1').addEventListener('click', () => {
-      const personData1 = collectPersonData(1);
-      const personValidationError = validatePersonData(personData1);
-      if (personValidationError) {
-        document.getElementById('pageError').textContent = personValidationError;
-        return;
-      }
-      const a1 = collectAnswers(1);
-      if (!isValid(a1)) {
-        document.getElementById('pageError').textContent = 'Заполните все вопросы в каждом разделе и выберите тип происшествия.';
-        return;
-      }
-      answers1 = a1;
-      document.getElementById('pageError').textContent = '';
-      showStep(2, true);
-      saveDraft();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    document.getElementById('back_2').addEventListener('click', () => {
-      document.getElementById('pageError').textContent = '';
-      showStep(1, true);
-      saveDraft();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    await loadForm(false);
+    bindPageActions();
 
     window.addEventListener('popstate', (event) => {
       const stepFromState = event.state?.step;
@@ -543,67 +626,13 @@ async function renderAssistantResult(personData1, personData2, result1, result2)
       saveDraft();
     });
 
-    document.getElementById('btn_2').addEventListener('click', async () => {
-      if (isEvaluating) return;
-      const personData1 = collectPersonData(1);
-      const personData2 = collectPersonData(2);
-      const personValidationError1 = validatePersonData(personData1);
-      const personValidationError2 = validatePersonData(personData2);
-      if (personValidationError1 || personValidationError2) {
-        document.getElementById('pageError').textContent = personValidationError1 || personValidationError2;
-        return;
-      }
-      const a1 = collectAnswers(1);
-      const a2 = collectAnswers(2);
-      if (!isValid(a1) || !isValid(a2)) {
-        document.getElementById('pageError').textContent = 'Заполните все вопросы в каждом разделе и выберите тип происшествия.';
-        return;
-      }
-      document.getElementById('pageError').textContent = '';
-      answers1 = a1;
-
-      if (!answerKey) {
-        document.getElementById('pageError').textContent = 'Не удалось загрузить критерии проверки. Обратитесь к преподавателю.';
-        return;
-      }
-
-      const btn = document.getElementById('btn_2');
-      const previousText = btn.textContent;
-      btn.textContent = 'Проверяем ответы...';
-      btn.disabled = true;
-      isEvaluating = true;
-      scrollToAssistantResult();
-
-      if (!isDemo) {
-        const send = await fetch('/api/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            teamId,
-            personData1,
-            personData2,
-            incidentText1: incident1,
-            incidentText2: incident2,
-            answers1,
-            answers2: a2
-          })
-        });
-        if (!send.ok) {
-          document.getElementById('pageError').textContent = 'Не удалось отправить результаты.';
-          btn.textContent = previousText;
-          btn.disabled = false;
-          isEvaluating = false;
-          return;
-        }
-      }
-
-      const result1 = evaluateParticipant(a1, answerKey.answers1);
-      const result2 = evaluateParticipant(a2, answerKey.answers2);
-      await renderAssistantResult(personData1, personData2, result1, result2);
-      localStorage.removeItem(QUIZ_STORAGE_KEY);
-      btn.textContent = previousText;
-      btn.disabled = false;
-      isEvaluating = false;
+    document.getElementById('openAdditionalFormBtn').addEventListener('click', async () => {
+      document.getElementById('openAdditionalFormBtn').classList.add('hidden');
+      document.getElementById('assistantResult').classList.add('hidden');
+      document.getElementById('assistantStatus').textContent = '';
+      await loadForm(true);
+      bindPageActions();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   } catch (e) {
     document.getElementById('pageError').textContent = 'Ошибка загрузки данных команды.';
