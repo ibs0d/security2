@@ -94,6 +94,8 @@ const timerStopBtn = document.getElementById('timerStop');
 
 let timerSeconds = 0;
 let timerInterval = null;
+let timerStartAt = null;
+let timerElapsedBeforeStart = 0;
 
 function formatTimer(seconds) {
   const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -114,10 +116,12 @@ function updateTimerButtons() {
 
 function startTimer() {
   if (timerInterval) return;
+  timerStartAt = Date.now();
   timerInterval = setInterval(() => {
-    timerSeconds += 1;
+    timerSeconds = Math.floor((Date.now() - timerStartAt + timerElapsedBeforeStart) / 1000);
     updateTimerDisplay();
   }, 1000);
+  updateTimerDisplay();
   updateTimerButtons();
 }
 
@@ -125,11 +129,17 @@ function pauseTimer() {
   if (!timerInterval) return;
   clearInterval(timerInterval);
   timerInterval = null;
+  timerElapsedBeforeStart += Date.now() - timerStartAt;
+  timerStartAt = null;
+  timerSeconds = Math.floor(timerElapsedBeforeStart / 1000);
+  updateTimerDisplay();
   updateTimerButtons();
 }
 
 function stopTimer() {
   pauseTimer();
+  timerElapsedBeforeStart = 0;
+  timerStartAt = null;
   timerSeconds = 0;
   updateTimerDisplay();
   updateTimerButtons();
