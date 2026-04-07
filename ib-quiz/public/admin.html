@@ -18,9 +18,28 @@
     .badges{display:flex;flex-wrap:wrap;gap:6px}.badge{font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid}
     .yes{color:var(--green);border-color:rgba(22,163,74,.3);background:rgba(22,163,74,.08)} .no{color:var(--red);border-color:rgba(220,38,38,.3);background:rgba(220,38,38,.08)}
     .muted{color:var(--text-muted);font-size:12px}
+    .auth-overlay{position:fixed;inset:0;z-index:20;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:24px}
+    .auth-box{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px}
+    .auth-title{font-family:'IBM Plex Mono',monospace;font-size:16px;margin-bottom:10px}
+    .auth-input{width:100%;padding:10px 12px;border-radius:6px;border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;margin-bottom:10px}
+    .auth-input:focus{outline:none;border-color:var(--accent)}
   </style>
 </head>
 <body>
+  <div class="auth-overlay" id="authOverlay">
+    <form class="auth-box" id="authForm">
+      <div class="auth-title">Вход в админ-панель</div>
+      <input
+        class="auth-input"
+        id="adminPasswordInput"
+        type="password"
+        autocomplete="current-password"
+        placeholder="Введите пароль администратора"
+        required
+      />
+      <button class="btn" type="submit">Войти</button>
+    </form>
+  </div>
   <div class="wrap">
     <div class="top">
       <h1>Админ-панель отправок</h1>
@@ -40,7 +59,10 @@
   </div>
 
 <script>
-const adminPassword = prompt('Введите пароль администратора:') || '';
+let adminPassword = '';
+const authOverlay = document.getElementById('authOverlay');
+const authForm = document.getElementById('authForm');
+const adminPasswordInput = document.getElementById('adminPasswordInput');
 const rows = document.getElementById('rows');
 const msg = document.getElementById('msg');
 
@@ -206,7 +228,14 @@ document.getElementById('clearBtn').addEventListener('click', async () => {
   loadSubmissions();
 });
 
-loadSubmissions();
+authForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  adminPassword = adminPasswordInput.value.trim();
+  authOverlay.style.display = 'none';
+  await loadSubmissions();
+});
+
+adminPasswordInput.focus();
 </script>
 </body>
 </html>
